@@ -13,14 +13,13 @@ Last modified: 28 July 2016
 Blaze Information Security will try to contact the vendor via commonly established vulnerability disclosure channels such as security@vendor, security-alert@vendor, psirt@vendor and similar e-mail addresses. Should this contact attempt not produce any response, the research team will try to contact the vendor via telephone.
 
 In case of successful receipt of the vulnerability information (i.e., e-mail did not bounce) but no response from the vendor, Blaze Information Security will attempt a second contact with the vendor 7 days after the initial notification.
-If the vendor is not responsive in 15 days after the second attempt, the vulnerability details will be made
-public regardless of the existence of a patch or a workaround to mitigate the issue.
+If the vendor is not responsive in 15 days after the second attempt, details about the vulnerability will be made public regardless of the existence of a patch or a workaround to mitigate the issue.
 
-If the vendor does not have a well-established vulnerability disclosure channel, Blaze Information Security will ask CERT/CC to intermediate the process. If this last attempt fails, Blaze reserves the right to publicly disclose the vulnerability without any further warning to the vendor.
+If the vendor does not have a well-established vulnerability disclosure channel, Blaze Information Security will ask CERT/CC to intermediate the process. If this last attempt fails, Blaze reserves the right to publicly disclose all relevant information regarding without any further warning to the vendor.
 
 ## Delivering the vulnerability report
 
-Whenever possible Blaze will send the vulnerability information via e-mail, encrypted with PGP. Our public key can be found in the appendix [1].
+Whenever possible Blaze will send the details about the vulnerability via e-mail, encrypted with PGP. Our public key can be found in the appendix [1].
 
 ## What we expect from vendors
 

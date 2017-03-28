@@ -1,0 +1,123 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA1
+
+
+- --= Blaze Information Security / Security Advisory --=
+
+1. Advisory information
+- -----------------------
+
+Title: Porteus Kiosk security restrictions bypass
+Advisory reference: BLAZE-01-2017
+Product: Porteus Kiosk
+Disclosure mode: Coordinated disclosure
+
+
+2. Product description
+- ----------------------
+
+Porteus Kiosk is a popular lightweight Linux designed to be used as a
+kiosk solution. It implements several restrictions with the intent to
+prevent malicious users to modify the configuration of the Firefox browser
+and to escape the restricted browser environment and obtain access to the
+underlying operating system and filesystem.
+
+
+3. Vulnerability details
+- ------------------------
+
+In order to restrict access to the browser configuration facilities,
+Porteus Kiosk removed these menus from the browser interface. In addition,
+it implemented a blacklist filter to prevent the user from accessing
+protocols that can be abused to escape these restrictions, such as file://
+and numerous chrome:// URIs.
+
+During a security review of this kiosk solution it was found the blacklist
+was not enough to prevent the user to access configuration menus of the
+browser.
+
+By typing any of these chrome URIs in Firefox:
+
+chrome://global/content/config.xul
+chrome://browser/content/openLocation.xul
+chrome://global/content/filepicker.xul
+chrome://mozapps/content/plugins/pluginInstallerWizard.xul
+chrome://passwordmgr/content/passwordManager.xul
+chrome://browser/content/preferences/preferences.xul
+chrome://browser/content/preferences/advanced.xul
+chrome://browser/content/preferences/applications.xul
+chrome://browser/content/preferences/connection.xul
+chrome://browser/content/preferences/permissions.xul
+chrome://browser/content/preferences/sanitize.xul
+chrome://browser/content/preferences/security.xul
+chrome://mozapps/content/downloads/downloads.xul
+chrome://browser/content/safeMode.xul
+
+A user of the kiosk can access its configurations, password manager, etc.
+For example, a malicious user can reconfigure the network preferences to
+point to an attacker-controlled proxy and launch other attacks from there,
+intercept traffic and other malicious actions.
+
+
+4. Fix and recommendations
+- --------------------------
+
+The vulnerability has been addressed by Porteus Kiosk in release 4.0.0.
+It is recommended to upgrade Porteus Kiosk to its latest version.
+
+
+5. Credits
+- ----------
+
+This vulnerability was discovered and researched by Julio Cesar Fort from
+Blaze Information Security (https://www.blazeinfosec.com)
+
+
+6. Disclosure timeline
+- ----------------------
+
+24/05/2016: Initial contact asking for the vendor's PGP key
+24/05/2016: Vendor responded, asking for details of the vulnerability to be sent via unencrypted e-mail
+24/05/2016: Vulnerability details sent unencrypted
+24/05/2016. Vendor informed the vulnerability has been fixed and a patch will be released in the next automatic update
+28/05/2016: A fix was released
+28/03/2016: Advisory released
+
+7. References
+- -------------
+
+Porteus Kiosk: http://porteus-kiosk.org
+
+
+8. About Blaze Information Security
+- -----------------------------------
+
+Blaze Information Security is a privately held, independent information
+security firm born from years of combined experience. With presence in
+South America and Europe, Blaze has a team of senior analysts with past
+experience in leading information security consulting companies around the
+world and a proven track record of published security research.
+
+[+] E-Mail: info@blazeinfosec.com
+[+] Wildfire Labs blog: https://blog.blazeinfosec.com
+[+] Twitter: https://www.twitter.com/blazeinfosec
+[+] Github: https://www.github.com/blazeinfosec
+[+] PGP key fingerprint: 9F8C 5552 C6A3 35F8 76E3 9A0C 09BD AA79 93E7 AE65
+
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBAgAGBQJY2qMvAAoJEAm9qnmT565lepgP/0mya4MExLwib6x0aRZB5Hi4
+TNiiWOOWdhbmSewPwK+LApTEvhkTuW12IHxxGTroM8uh/bsJcLrdVnaFmfLaLLsY
+SmpV48BmQ28+Y4/36PIS50So6O7IzY3lyJxW+q8HwbOTf5zOd5c6IHUvB+DBAn0A
+5LOk5WoNahjxTLYqavdEgqyORxhYEOVvU62thWasBYLoEjTU1QYVfp90CZpeHDE8
+8gWb233htXI3Be6ee0YMno2vAtzNZPegN3ikbOSDvai/jFdufKkswxFRSybI8ayk
+kwgbFM3RzMsYV/FX22XiMa+WNJIZiFQ9DgmfYo7TnRU3mOG/3doOur71jg/yL0up
+MNX+dNmaobxDungZt9TtnedUarfl2hY+wTN9+eY/kYd6b80gHcLUsKMyUwWmYmzN
+SWjcKmya9/42vqyaJ+dfp+s44YRmBUyXu1b+ncoOfrZZDmcdoVImUKasQ/8xe3XP
+of7zHG/pU1bOAvoquc/lPRXfaKX0z6XDNqcFbSmqQa+XTUrek1hXpBiCbqYR4X0T
+g/Scp0qWRF+ozZBa2Xttui9RQbzEV1wa0qpZUWC+23OXwdwijNzQthu+kmkNoPlU
+BOJDMZ733x+x6yPvITEL1zHc58VxSRVc3hE+YZyF3xKkZ+WO2eO8P/UrD6GcXNWf
+GuPkZAsLOnpyPb83zVeU
+=taUa
+-----END PGP SIGNATURE-----

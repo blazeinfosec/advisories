@@ -111,7 +111,8 @@ security consulting companies around the world and a proven track record of publ
 [+] Wildfire Labs blog: https://blog.blazeinfosec.com
 [+] Twitter: https://www.twitter.com/blazeinfosec
 [+] Github: https://www.github.com/blazeinfosec
-[+] PGP key fingerprint: 9F8C 5552 C6A3 35F8 76E3 9A0C 09BD AA79 93E7 AE65
+[+] PGP key fingerprint: DB53 D9D9 F0E1 E513 4F52  8219 C33B C7FA C5D0 E926
+
 -----BEGIN PGP SIGNATURE-----
 
 iQIzBAEBCAAdFiEE21PZ2fDh5RNPUoIZwzvH+sXQ6SYFAlyXc+sACgkQwzvH+sXQ

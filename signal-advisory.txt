@@ -1,0 +1,130 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+﻿- - --= Blaze Information Security / Security Advisory --=
+
+1. Advisory information
+- - - -------------------
+
+Title: Signal IDN homograph attacks
+Advisory reference: BLAZE-01-2019
+Product: Signal
+Disclosure mode: Coordinated disclosure
+
+
+2. Product description
+- - - ------------------
+
+Signal is an encrypted communications app for Android and iOS. A desktop version is also available for Linux, Windows, and macOS.
+It uses the Internet to send one-to-one and group messages, which can include files, voice notes, images and videos,
+and make one-to-one voice and video calls.
+
+Signal uses standard cellular mobile numbers as identifiers, and uses end-to-end encryption to secure all communications to
+other Signal users. The applications include mechanisms by which users can independently verify the identity of their
+messaging correspondents and the integrity of the data channel. (from Signal's Wikipedia page)
+
+
+3. Vulnerability details
+- - - --------------------
+
+Signal Desktop and Android are vulnerable to an IDN homograph attack when displaying messages containing URLs.
+
+Homograph attack is a security vulnerability that can deceive users into thinking they are visiting a certain
+website when in fact they are directed to a different, but homograph, domain name. This type of vulnerability can be
+used to weaponize social engineering, significantly increasing the chances for a successful attack.
+
+Upon receiving a message with a link, Signal renders it in a clickable format and the font used to display the message
+makes it impossible to distinguish between the legitimate URL and the malicious URL, for example:
+
+Legitimate URL: http://blazeinfosec.com
+Malicious URL: http://blаzeinfosec.com - with the 'a' as a Cyrillic character, not Latin
+
+Upon clicking on the malicious link, a user will be taken to http://xn--blzeinfosec-zij.com/ instead of the real
+http://blazeinfosec.com, despite the fact the link is displayed exactly as the expected web site.
+
+
+A sample attack scenario against a Signal mobile user:
+
+- - An activist or person of interest uses Signal for Android
+- - The person receives a URL in a Signal message disguised as a legitimate one and clicks on the link
+- - The malicious URL serves a one-click browser exploit
+- - Target gets infected with mobile malware
+
+Additionally, the mobile version of Tor Browser (Orfox, in Android) is vulnerable to the same class
+of attack. Therefore, users of Signal with Tor Browser (which does not seem to be a rare combination)
+are vulnerable to full-blown phishing attacks.
+
+
+4. Fix and recommendations
+- - - ----------------------
+
+Blaze Information Security recommends Signal to "defang" URLs just like it is done in its iOS version.
+URLs with mixed scripts (e.g., Latin and Cyrillic in the same domain name) or URLs using scripts not
+installed or enabled in the device should be displayed in the message as un-clickable.
+
+Alternatively, Signal could implement the same strategy used by WhatsApp to mark the link as insecure, with a
+clear warning message to the user when an IDN homograph domain name is encountered in the message.
+
+
+The vulnerability has been addressed by Signal at least in version 4.35.3 for Android.
+As of now, Windows-based Signal for Desktop is still vulnerable. Users should upgrade Signal to its latest version.
+
+
+5. Credits
+- - - ------
+
+This vulnerability was discovered and researched by Julio Cesar Fort from
+Blaze Information Security (https://www.blazeinfosec.com)
+
+
+6. Disclosure timeline
+- - - ----------------------
+
+31/01/2019: Initial contact asking for the vendor's PGP key
+31/01/2019: Vendor responded asking for details of the vulnerability to be sent, surprisingly, via unencrypted e-mail
+31/01/2019: Vulnerability details sent via unencrypted mail
+01/02/2019: Signal responds "it seems like standard behavior here is to rely on the browser to disambiguate
+these names (and the registrar to prevent issuance of ambiguous names)."
+01/02/2019: Blaze responds citing one-click exploits and the case of Ahmed Mansoor and Pegasus malware as a credible attack scenario
+03/02/2019: Blaze sends a report to Signal informing Tor Browser for Android is vulnerable, turning it into a full phishing chain
+12/02/2019: Signal responds "We don't consider this a 'vulnerability' or 'bug'", despite evidence showing otherwise.
+Unknown 2019: A fix was released - the vendor never informed Blaze about the fix.
+23/03/2019: Advisory released
+
+
+7. References
+- - - ---------
+
+Signal: https://signal.org/
+IDN homograph attack: https://en.wikipedia.org/wiki/IDN_homograph_attack
+The Homograph Attack: http://www.cs.technion.ac.il/~gabr/papers/homograph_full.pdf
+
+
+8. About Blaze Information Security
+- - - -------------------------------
+
+Blaze Information Security is a privately held, independent information security firm born from years of combined experience.
+With presence in South America and Europe, Blaze has a team of senior analysts with past experience in leading information 
+security consulting companies around the world and a proven track record of published security research.
+
+[+] E-Mail: info@blazeinfosec.com
+[+] Wildfire Labs blog: https://blog.blazeinfosec.com
+[+] Twitter: https://www.twitter.com/blazeinfosec
+[+] Github: https://www.github.com/blazeinfosec
+[+] PGP key fingerprint: 9F8C 5552 C6A3 35F8 76E3 9A0C 09BD AA79 93E7 AE65
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEE21PZ2fDh5RNPUoIZwzvH+sXQ6SYFAlyXc+sACgkQwzvH+sXQ
+6SY5OhAAiEecjOPChS82VZ38Fn4zF09AREfkXTjmjsBDqM/mb3OHDE0xZn7389HT
+VQZk0LYr4bWfD+IltcHNN0NBvevcQJiKfwpz/OAO0ShFmcmwx+GIXlywiTHkBadd
+5kFo26W+w/6VMiuY+LhvBD4E+hGWkmTTfmKxsVy+bGdLu1VjO01g3mJEHeUYpdEr
+4hmHnPaTiUH2XyjxDnscjMSzbv3XQd1jhWD3naWfrpG+0Lsj1Qo4EiNUjlLQ7Qke
+QPSO7sF1UZpSg/Zm6A7ZlJP4+LFP1QrYNRiQ7VCfozX6fqiufHCx/HW8CrdSQSHp
+74VJPiHR3I0ZNylzKyQijPJOQzbEAQeuIZmY8Pi5qlv5lePxogRlA2XuoQmq0vse
+Ew5NJEreVxq10GaL0NBpr0Rq+L6W8t2B44Q3CooRsJUm9ukhtovfSJpKde0bK9R6
+dzd5ejJy5iQnrnzDe1FV/Jt63RKA/ByFBRNvRDj1DSO/xXbulis6DQj1az/Nmz5z
+N4QgXyhFjaIrzTskZ01QlBCP0+yF+e+YHgN5KhQyoCIMZuhdNifZ12DIIR93CS3+
+SdOux3GvaFZCQaXs624AE6EKhfyB4W3ryd9DU7TY7GrJJOAzfxMbX0ZPF6vbtPYn
+5d6o4XWcrwhueDEsIAFZit7vUKA7qKHqlQDCrq3araOzvhTJ4JM=
+=HEMf
+-----END PGP SIGNATURE-----

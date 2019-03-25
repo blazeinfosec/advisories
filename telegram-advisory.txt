@@ -1,0 +1,130 @@
+﻿-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+﻿- - --= Blaze Information Security / Security Advisory --=
+
+1. Advisory information
+- - - -------------------
+
+Title: Telegram instant messenger IDN homograph attacks
+Advisory reference: BLAZE-02-2019
+Product: Telegram
+Disclosure mode: Coordinated disclosure
+
+
+2. Product description
+- - - ------------------
+
+Telegram is a messaging app with a focus on speed and security, it’s super-fast, simple and free. You can use Telegram
+on all your devices at the same time — your messages sync seamlessly across any number of your phones, tablets or computers.
+
+With Telegram, you can send messages, photos, videos and files of any type (doc, zip, mp3, etc), as well as create groups
+for up to 200,000 people or channels for broadcasting to unlimited audiences. You can write to your phone contacts and
+find people by their usernames. As a result, Telegram is like SMS and email combined — and can take care of all your
+personal or business messaging needs. In addition to this, we support end-to-end encrypted voice calls.
+(from Telegram FAQ: https://telegram.org/faq#q-what-is-telegram-what-do-i-do-here)
+
+
+3. Vulnerability details
+- - - --------------------
+
+Telegram (tested on all mobile versions and Linux and Windows for desktop) is vulnerable to an IDN homograph
+attack when displaying messages containing URLs.
+
+Homograph attack is a security vulnerability that can deceive users into thinking they are visiting a certain
+website when in fact they are directed to a different, but homograph, domain name. This type of vulnerability can be
+used to weaponize social engineering, increasing the chances for a successful attack.
+
+Upon receiving a message with a link, Telegram renders it in a clickable format and the font used to display the message
+makes it impossible to distinguish between the legitimate URL and the malicious URL, for example:
+
+Legitimate URL: http://blazeinfosec.com
+Malicious URL: http://blаzeinfosec.com - with the 'a' as a Cyrillic character, not Latin
+
+On top of that Telegram renders a preview of the web site, making it even more deceptive for a user.
+
+Upon clicking on the malicious link, a user will be taken to http://xn--blzeinfosec-zij.com/ instead of the real
+http://blazeinfosec.com, despite the fact the link is displayed exactly as the expected web site.
+
+
+A sample attack scenario against a Telegram user:
+
+- - An activist or person of interest uses Telegram
+- - The person receives a URL in a Telegram message disguised as a legitimate, Telegram renders a preview
+- - The user clicks on the link
+- - The malicious URL serves a one-click browser exploit
+- - Target gets infected with mobile or desktop malware
+
+Additionally, the mobile and desktop versions of Tor Browser is vulnerable to the same class
+of attack. Therefore, users of Telegram with Tor Browser are prone to full-blown phishing attacks.
+
+
+4. Fix and recommendations
+- - - ----------------------
+
+Blaze Information Security recommends Telegram to "defang" URLs with mixed scripts (e.g., Latin and Cyrillic
+in the same domain name) or URLs using scripts not installed or enabled in the device should be displayed in
+the message as un-clickable.
+
+Alternatively, Telegram could implement the same strategy used by WhatsApp to mark the link as insecure, with a
+clear warning message to the user, when an IDN homograph domain name is encountered in the message.
+
+The vulnerability seems to have been addressed by Telegram in its Windows version 1.5.12. The status of the
+other platforms is unknown, as the vendor has not responded to multiple contact attempts.
+
+
+5. Credits
+- - - ------
+
+This vulnerability was discovered and researched by Julio Cesar Fort from
+Blaze Information Security (https://www.blazeinfosec.com)
+
+
+6. Disclosure timeline
+- - - ------------------
+
+31/01/2019: Initial contact asking for the vendor's PGP key
+01/02/2019: Vendor responded with PGP key, asking for details of the vulnerability to be sent via encrypted e-mail
+01/02/2019: Vulnerability details sent via encrypted e-mail
+Unknown: A fix was released at least for Telegram Desktop for Windows, version 1.5.12. The vendor has never
+contacted the reporter to inform about the fix.
+25/03/2019: Advisory released
+
+
+7. References
+- - - ---------
+
+Telegram: https://telegram.org/
+IDN homograph attack: https://en.wikipedia.org/wiki/IDN_homograph_attack
+The Homograph Attack: http://www.cs.technion.ac.il/~gabr/papers/homograph_full.pdf
+
+
+8. About Blaze Information Security
+- - - -------------------------------
+
+Blaze Information Security is a privately held, independent information security firm born from years of combined experience.
+With presence in South America and Europe, Blaze has a team of senior analysts with past experience in leading information 
+security consulting companies around the world and a proven track record of published security research.
+
+[+] E-Mail: info@blazeinfosec.com
+[+] Wildfire Labs blog: https://blog.blazeinfosec.com
+[+] Twitter: https://www.twitter.com/blazeinfosec
+[+] Github: https://www.github.com/blazeinfosec
+[+] PGP key fingerprint: DB53 D9D9 F0E1 E513 4F52  8219 C33B C7FA C5D0 E926
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEE21PZ2fDh5RNPUoIZwzvH+sXQ6SYFAlyYlHoACgkQwzvH+sXQ
+6SbPIA/6AssoNDPi7qpQ5XSv9d2RnqmBAnFUXgKffB1u9APx1oxWKoXbP4juWfG4
+tRjZ4I3Y0LNLKKcfJWW0dS/7gdcKZ+A21tmEL1uPf0y0qFYr93AI6WosTmeGYtvy
+hRe1oftgCdilL1Rovq5hBGwe7VS9X5kdmBT0nzTArlpsALYqrwZFFbY4QThltCCz
+4RVRVKnJdHezULxEn/KkrMpvsBIFwjDdal58i7OlCrzXaSlL6Lkyp+9piAqjPAzq
+Nc/AGpUiUKAycOD8EEjRRBmCWwDiVD5bbBatg+7NoUlGlAwUq4c9HL4bcvQT1VOC
+6lzN+HN2lA19DLOPtqEK/eQjOTPM28xwKynMZ9keMc1UlDnOZCSa2I/A7fbE8dQZ
+qWdj1U2ZhE9hSM+VV1RT17JNJae0kcbmkEiXpwMJYx3RBHzASOWlUsqu8S7lPlSy
++q0DSd7gkiUsW0yXZ25IIs5SZWDvH9RYyz5GLHXm6+uVNQ91/sJBlwxmcoEUmuhI
+aiRxJ7AizhSfwV+GaIU9Xi7Ji1fTD1+/6eprQ5Pscc1mrfubIF7Uhi6JMMvc89ke
+frZj7oaC8AQMvLIpBBp6TvrhA4FLh23P6W5DxQi3Yo8hjl6CT5UUhjulEI3pto+N
+Tx3CoIYDmSPES2bn9PGEzQuIReXUlgQxZXIpM31649s4Rsmgqjc=
+=fOT9
+-----END PGP SIGNATURE-----

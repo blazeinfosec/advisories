@@ -1,0 +1,124 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+﻿- - --= Blaze Information Security / Security Advisory --=
+
+1. Advisory information
+- - - -----------------------
+
+Title: Java Web Start URI Handler NTLM hash disclosure
+Advisory reference: BLAZE-04-2019
+Product: Oracle Java Runtime Environment
+Disclosure mode: Forced disclosure
+
+
+2. Product description
+- - - ----------------------
+
+The Java Web Start software allows you to download and run Java applications from the web. The Java Web Start software:
+* Provides an easy, one-click activation of applications
+* Guarantees that you are always running the latest version of the application
+* Eliminates complicated installation or upgrade procedures
+
+Java Web Start is included in the Java Runtime Environment (JRE) since release of Java 5.0. This means that when
+you install Java, you get Java Web Start installed automatically.
+
+(from https://www.java.com/en/download/faq/java_webstart.xml)
+
+
+3. Vulnerability details
+- - - ------------------------
+
+On Windows, Java Web Start registers two URI protocol handlers in the registry.
+These handlers make it possible for Web Start to be called from a web browser.
+
+These protocol handlers, 'jnlp' and 'jnlps', when called launch the following command line:
+
+* "C:\Program Files\Java\jre1.8.0_192\bin\jp2launcher.exe" -securejws "%1"
+where %1 is the argument passed to it via the browser.
+
+For instance if a user types in the URL bar "jnlp:http://www.blazeinfosec.com",
+jp2launcher.exe will be spawned with the arguments -securejws "jnlp:http://www.blazeinfosec.com".
+It will launch Java Web Start and attempt to fetch a JNLP file from the given URL.
+
+Prior to JRE update 202 on Windows, if the remote web server prompted for authentication, Java Web Start would
+perform what is known as "Transparent authentication" -- where the security credentials are based on the currently
+logged in user's name and password NTLM hash without prompting the user.
+
+If forced to trigger the handler with the arguments "jnlp:http://server_with_responder", JRE would attempt
+to authenticate with the current user's NTLM hash.
+
+A sample attack scenario against a user:
+
+1. Attacker sets up a malicious web server prompting for NTLM authentication (e.g., using Responder)
+2. A user visits an affected page (lured to type in the URL bar, malicious iframe, persistent XSS)
+3. Depending on the browser, an innocuous prompt to launch Java Web Start will appear
+4. Java Web Start will attempt to fetch a remote .jnlp and will fail
+5. The attacker captured the user's NTLM hashes
+
+Since update 202, the default value jdk.http.ntlm.transparentAuth=disabled made this issue non-exploitable
+by default. However, under certain scenarios this vulnerability can still be exploited depending on the
+configuration of lib/net.properties.
+
+
+4. Fix and recommendations
+- - - --------------------------
+
+The vulnerability has been mitigated by Oracle in Java Runtime Environment update 202 and 211.
+Previous versions such as JRE update 192, 161, 151 and lower are affected.
+
+The current safe default in JRE_home/lib/net.properties is: jdk.http.ntlm.transparentAuth=disabled
+
+
+
+5. Credits
+- - - ----------
+
+This vulnerability was discovered and researched by Julio Cesar Fort from
+Blaze Information Security (https://www.blazeinfosec.com)
+
+
+6. Disclosure timeline
+- - - ----------------------
+
+21/06/2019: Vulnerability discovered when inspecting different pluggable protocol handlers
+28/06/2019: Further research indicated Oracle patched the vulnerability, probably by chance, in release 202
+05/07/2019: Advisory released
+
+
+7. References
+- - - -------------
+
+Java Web Start: https://www.java.com/en/download/faq/java_webstart.xml
+travreg.py: https://github.com/blazeinfosec/travreg 
+Java 8 Update 201 Authentication window on Startup: https://answers.axonivy.com/questions/3659/java-8-update-201-authentication-window-on-startup
+
+
+8. About Blaze Information Security
+- - - -----------------------------------
+
+Blaze Information Security is a privately held, independent information security firm born from years of combined experience.
+With presence in South America and Europe, Blaze has a team of senior analysts with past experience in leading information 
+security consulting companies around the world and a proven track record of published security research.
+
+[+] E-Mail: info@blazeinfosec.com
+[+] Wildfire Labs blog: https://blog.blazeinfosec.com
+[+] Twitter: https://www.twitter.com/blazeinfosec
+[+] Github: https://www.github.com/blazeinfosec
+[+] PGP key fingerprint: 9F8C 5552 C6A3 35F8 76E3 9A0C 09BD AA79 93E7 AE65
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEE21PZ2fDh5RNPUoIZwzvH+sXQ6SYFAl0fHpEACgkQwzvH+sXQ
+6SYU5Q//QfIvyWqNvueuy8QWd/2T90C66l8uezbn0yB5/U3qCl4iUzebqZwMIMCk
+yot5MX7t1GnaDRExm+7mhlrM7QCNlLa0hvdCple5IHPVEQ0I7FYG+kbxC+TwwfF5
+aitCba0TcWnN/4DkUxdqXsVgl26XEg/aaXHwx+ik1/Vez/OrFRsKmFuGpzYmYLvt
+rj0Xw6CuJJNWGzTHGnH+MRwzRjUDCfUTvE2+/+e8I01Zwy+zUCzxXu9z0wsiDu7a
+fZbMtlZHNBMyFucyTk2d9ZJgvbiq8T+JYbq4jUZyyqthdgaSPd8oiylEbeWadsiJ
+CCWWUptZbYrn7Q+77w7sNSYv34EdbHoiMnJBgAjZ8xXRBXqQ6xhJmjFfIgltTd03
+wBZiXMSVshGWYErlA6+uf51JumlCXtrT9eWCSWm4C3Hap4AxSIYLSGqNDAHQM14c
+46pAo0ULRQFVA4/TbfyTatjfMXOcKZKS9usg4SA+XE74uNMj3BpDmWp7+hoJQ6VC
+0377SR+y3acMSD6/mn3UPflKHNOtRCv5OTIZ2p401+6q2i6Tnf5bYbO0AoNEGoG9
+t2qA6x/lPNYsYeMopJH9w6y+KQMi3ZqyZc9BC4T4PhQKwUN6g7j6msdV7MdO1DYn
+dO1OCvUMOoimuJ0kBz4HIAi8axJ5iCFDksbAa/U1wagkoiAZqkU=
+=UuSA
+-----END PGP SIGNATURE-----

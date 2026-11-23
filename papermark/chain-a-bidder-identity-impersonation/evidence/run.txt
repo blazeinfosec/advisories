@@ -1,0 +1,35 @@
+CHAIN A — unauthenticated identity assumption   base=http://localhost:3000
+  group link=cmukykgxj002vmqv34iveg3hq  room=cmuk2443f0001mqpj7hewx5fa  target bidder=bidder-a@acquirer-alpha.test
+
+  [VULN PASS] the link URL alone yields the dataroomId, unauthenticated  dataroomId=cmuk2443f0001mqpj7hewx5fa
+  [CTRL PASS] the target is a genuine invited group member
+  [CTRL PASS] the link is GROUP with emailAuthenticated=false (the shipped default)
+  [CTRL PASS] a stranger address is refused entry  HTTP 403
+  [VULN PASS] entry is granted on a self-asserted address, with no verification  HTTP 200
+  [VULN PASS] the response returns the GENUINE bidder's canonical viewerId  returned cmuk25nib0001mqqibzl5gaem == ground truth cmuk25nib0001mqqibzl5gaem
+  [NOTE] this step is loud  it records a View and notifies the seller (attributed to the bidder)
+      "Bidder A - price discussion" [PRIVATE]
+        > VICTIM-ASSET: our board will not approve above 71M. Can you move on the earn-out
+        > SELLER-REPLY: we can flex the earn-out to 3 years if you clear diligence by Frid
+        > PATHA-1790582612457: we are prepared to raise our offer.
+      "Bidder A private diligence" [PRIVATE]
+        > CONFIDENTIAL JF-CHAIN-1790543069031: our walk-away price is 71M
+  [VULN PASS] an unauthenticated caller reads the bidder's PRIVATE thread  2 PRIVATE thread(s), 5 pre-existing message(s)
+  [VULN PASS] the read leaves no trace anywhere in the schema  0 row changes
+  [VULN PASS] an anonymous message is stored in the victim's private thread, attributed to the bidder  cmw7xlmhl001fmq1921iqre3x
+  [VULN PASS] an anonymous caller writes the bidder's notification setting  flipped and restored (original=True)
+  [SKIP] 60-probe enumeration  not re-run to avoid flooding the seller's notifications; round 3 measured 60 probes, one IP, 104s, zero 429s on the deny path
+
+  cleanup: forged message deleted; notification setting restored
+
+========================================================================
+CHAIN A — bidder identity impersonation  (CHAINA-1794148323)
+========================================================================
+  vulnerability assertions : 7 proven, 0 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+  observations             : 1
+  skipped                  : 1
+
+  Not demonstrated in this run:
+    - 60-probe enumeration: not re-run to avoid flooding the seller's notifications; round 3 measured 60 probes, one IP, 104s, zero 429s on the deny path
+

@@ -1,0 +1,53 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Enforce API token scope and expiry on document writes
+
+The documents endpoint accepted any team API token without checking its
+scopes or expiry, so an expired read-only RestrictedToken could create
+documents. Select the token's scopes and expiresAt and reject a write the
+token is not scoped for or that has expired.
+---
+diff --git a/pages/api/teams/[teamId]/documents/index.ts b/pages/api/teams/[teamId]/documents/index.ts
+index cc41f1e3..aeae09e7 100644
+--- a/pages/api/teams/[teamId]/documents/index.ts
++++ b/pages/api/teams/[teamId]/documents/index.ts
+@@ -379,7 +379,7 @@ export default async function handle(
+       // Look up token in database
+       const restrictedToken = await prisma.restrictedToken.findUnique({
+         where: { hashedKey: hashedToken },
+-        select: { userId: true, teamId: true },
++        select: { userId: true, teamId: true, scopes: true, expires: true },
+       });
+ 
+       // Check if token exists
+@@ -392,6 +392,27 @@ export default async function handle(
+         return res.status(401).json({ error: "Unauthorized" });
+       }
+ 
++      // Reject expired tokens. Without this, revocation by expiry does not work:
++      // an expired token keeps writing indefinitely.
++      if (
++        restrictedToken.expires &&
++        restrictedToken.expires.getTime() < Date.now()
++      ) {
++        return res.status(401).json({ error: "Token expired" });
++      }
++
++      // This endpoint creates a document (a write), so require a scope that
++      // permits writes. A read-only token ("apis.read") must be refused. Null
++      // scopes are legacy full-access ("apis.all").
++      const scopes = (restrictedToken.scopes ?? "apis.all").split(" ");
++      const canWrite =
++        scopes.includes("apis.all") || scopes.includes("documents.write");
++      if (!canWrite) {
++        return res
++          .status(403)
++          .json({ error: "Insufficient token scope for this operation" });
++      }
++
+       userId = restrictedToken.userId;
+     } else {
+       // Fall back to session auth
+-- 
+2.55.0

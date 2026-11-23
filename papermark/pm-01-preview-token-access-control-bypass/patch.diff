@@ -1,0 +1,58 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Require team membership before minting a link preview token
+
+The preview mint authenticated the session but never checked that the
+caller belongs to the link's team, so any logged-in user could mint a
+preview token for any link id and read its document pages through
+/api/views/pages, bypassing the link's password, email, expiry and group
+gates. Verify UserTeam membership for the link's team before
+createPreviewSession.
+---
+diff --git a/pages/api/links/[id]/preview.ts b/pages/api/links/[id]/preview.ts
+index a4991550..ee249b8a 100644
+--- a/pages/api/links/[id]/preview.ts
++++ b/pages/api/links/[id]/preview.ts
+@@ -3,6 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
+ import { getServerSession } from "next-auth/next";
+ 
+ import { createPreviewSession } from "@/lib/auth/preview-auth";
++import prisma from "@/lib/prisma";
+ import { CustomUser } from "@/lib/types";
+ 
+ import { authOptions } from "../../auth/[...nextauth]";
+@@ -19,11 +20,27 @@ export default async function handle(
+     }
+ 
+     const { id } = req.query as { id: string };
++    const userId = (session.user as CustomUser).id;
+ 
+-    const previewSession = await createPreviewSession(
+-      id,
+-      (session.user as CustomUser).id,
+-    );
++    // PM-01: a preview token must only be minted by a member of the link's team.
++    // Preview is an owner-side affordance; without this check any logged-in user
++    // mints a token for any link id and reads that link's document pages through
++    // /api/views/pages, bypassing the link's password, email, and expiry gates.
++    const link = await prisma.link.findUnique({
++      where: { id },
++      select: { teamId: true },
++    });
++    if (!link?.teamId) {
++      return res.status(404).end("Not found");
++    }
++    const membership = await prisma.userTeam.findUnique({
++      where: { userId_teamId: { userId, teamId: link.teamId } },
++    });
++    if (!membership) {
++      return res.status(403).end("Forbidden");
++    }
++
++    const previewSession = await createPreviewSession(id, userId);
+ 
+     return res.status(200).json({ previewToken: previewSession.token });
+   } else {
+-- 
+2.55.0

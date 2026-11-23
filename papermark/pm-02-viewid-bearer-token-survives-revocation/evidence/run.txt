@@ -1,0 +1,19 @@
+PM-02 — viewId is a 23h bearer that survives revocation   base=http://localhost:3000
+  link=cmuiv8b6e000jmqej95zpjt4u  version=cmuiv8b4x0007mqejdzjiyri2
+
+  [CTRL PASS] a legitimate open mints a viewId  HTTP 200
+  [VULN PASS] the viewId alone serves signed page images  HTTP 200 pages=1
+  [CTRL PASS] the front door refuses after revocation  HTTP 404
+  [VULN PASS] the viewId survives revocation: the back door still serves page images  HTTP 200 pages=1
+  [NOTE] contradiction  front door says the link is gone; back door serves the document
+
+  cleanup: probe view deleted; link expiry/archive restored to pre-run state
+
+========================================================================
+PM-02 viewId bearer token survives revocation
+========================================================================
+  vulnerability assertions : 2 proven, 0 not proven   <- the finding
+  controls                 : 2 held, 0 failed          <- baseline only
+  observations             : 1
+  skipped                  : 0
+

@@ -1,0 +1,17 @@
+H6 TRANSCRIPT 2026-09-26T22:03:49Z
+--- front door AFTER revocation (archived + expired + password rotated) ---
+POST /api/views with the OLD password: {"message":"Link is no longer available."} HTTP 404
+
+--- back door: replay old viewId, no cookies, no password ---
+POST /api/views/pages viewId=cmuixrsvq0005mqveafuge54y: HTTP 200
+
+Source: app/api/views/pages/route.ts:146-195. For a DOCUMENT view the only checks are
+  view exists, viewedAt within VIEW_MAX_AGE_MS (23h, :17), and documentVersion belongs
+  to view.documentId. The cookie check at :196 is guarded by 'view.dataroomId && view.linkId',
+  so it never runs for document links. Link state is never re-read.
+
+--- PHASE 1 RE-AUDIT: annotations route, same revoked link (archived + expired + password rotated) ---
+  GET /api/links/cmuiv8b5t000fmqejw0iduodh/annotations?viewId=cmuixrsvq0005mqveafuge54y  -> HTTP 200  []
+  Source: pages/api/links/[id]/annotations.ts:22-55 gates on view.id + view.linkId,
+  checks link.deletedAt and a 23h viewedAt window - but NOT isArchived, expiresAt,
+  or the password. No cookie or session is consulted. Same class as PM-02.

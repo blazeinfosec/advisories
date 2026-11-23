@@ -1,0 +1,18 @@
+H7 TRANSCRIPT 2026-09-27T14:33:34Z
+Self-hosted profile: VERCEL unset. No Upstash-Signature header sent.
+
+  POST /api/cron/domains                     -> HTTP 200  []
+  POST /api/cron/year-in-review              -> HTTP 200  {"success":true}
+  POST /api/cron/dataroom-digest/daily       -> HTTP 200  {"success":true,"processed":0}
+  POST /api/cron/dataroom-digest/weekly      -> HTTP 200  {"success":true,"processed":0}
+  POST /api/cron/welcome-user                -> HTTP 500  Error sending welcome email and subscribing user to mailing list.
+
+--- webhooks/callback, no Upstash-Signature ---
+
+  HTTP 500
+  (a 'Webhook not found' response means signature verification was SKIPPED
+   and execution reached the database lookup — the guard did not fire)
+
+--- webhooks/callback, corrected payload, still NO Upstash-Signature ---
+Webhook not found
+  HTTP 200

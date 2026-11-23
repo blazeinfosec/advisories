@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Re-check link revocation on the viewId page-image path
+
+The viewId branch of /api/views/pages served signed page images without
+re-reading the link's isArchived/expiresAt/deletedAt, so a viewId kept
+working as a bearer token after the link was archived, expired or deleted.
+Re-read the link's state on the viewId path and refuse a revoked link.
+---
+diff --git a/app/api/views/pages/route.ts b/app/api/views/pages/route.ts
+index acabbe78..b479e8aa 100644
+--- a/app/api/views/pages/route.ts
++++ b/app/api/views/pages/route.ts
+@@ -194,6 +194,27 @@ export async function POST(request: NextRequest) {
+       );
+     }
+ 
++    // PM-02: re-read the link's current state on every page request so that
++    // revocation takes effect. Without this, a viewId keeps serving page images
++    // for VIEW_MAX_AGE_MS after the owner archives, expires, or deletes the link.
++    if (view.linkId) {
++      const currentLink = await prisma.link.findUnique({
++        where: { id: view.linkId },
++        select: { isArchived: true, expiresAt: true, deletedAt: true },
++      });
++      if (
++        !currentLink ||
++        currentLink.isArchived ||
++        currentLink.deletedAt ||
++        (currentLink.expiresAt && currentLink.expiresAt < new Date())
++      ) {
++        return NextResponse.json(
++          { message: "Link is no longer available." },
++          { status: 404 },
++        );
++      }
++    }
++
+     if (view.dataroomId && view.linkId) {
+       const session = await verifyDataroomSession(
+         request,
+-- 
+2.55.0

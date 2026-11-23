@@ -1,0 +1,19 @@
+PM-08 — API token ignores scope and expiry   base=http://localhost:3000   team=cmuiv8b4d0003mqejm7mle4sl
+
+  [CTRL PASS] token is read-only and already expired  scopes=apis.read expires=2026-11-07 14:10:10.400000
+  [NOTE] write response  status=500 (500 is the Trigger.dev stub; the row lands first)
+  [VULN PASS] an expired read-only token performs a write (document row persisted)  row=cmw7wt1h00014mq1977d7se6m
+  [CTRL PASS] a bogus bearer token is refused 401  status=401
+  [CTRL PASS] the valid token aimed at another team is refused 401  status=401
+  [NOTE] conclusion  authentication works; only authorization (scope and lifetime) is missing
+
+  cleanup: seeded token and any written document removed
+
+========================================================================
+PM-08 API token scope and expiry bypass
+========================================================================
+  vulnerability assertions : 1 proven, 0 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+  observations             : 2
+  skipped                  : 0
+

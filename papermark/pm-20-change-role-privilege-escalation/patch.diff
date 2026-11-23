@@ -1,0 +1,62 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Restrict change-role to admins and keep one admin
+
+change-role checked only team membership, so any member -- including the
+lowest role -- could promote themselves or demote the team's admin, leaving
+a tenant with no admin. Require the caller to be an ADMIN and refuse a
+change that would remove the last admin.
+---
+diff --git a/pages/api/teams/[teamId]/change-role.ts b/pages/api/teams/[teamId]/change-role.ts
+index 7d1f81e8..3285f24f 100644
+--- a/pages/api/teams/[teamId]/change-role.ts
++++ b/pages/api/teams/[teamId]/change-role.ts
+@@ -46,25 +46,29 @@ export default async function handle(
+         return res.status(401).json("Unauthorized");
+       }
+ 
+-      // Only ADMINs can change roles
+-      if (role === "ADMIN" && userTeam.role !== "ADMIN") {
++      // Managing team members is an ADMIN-only operation. The previous code
++      // gated only the ADMIN and DATAROOM_MEMBER target roles, leaving MANAGER
++      // and MEMBER reachable by any team member, including DATAROOM_MEMBER.
++      if (userTeam.role !== "ADMIN") {
+         return res.status(403).json("Only admins can change user roles");
+       }
+ 
+-      // Managing the dataroom-scoped role (and its room assignments) is an
+-      // ADMIN/MANAGER-only operation.
+-      if (
+-        role === "DATAROOM_MEMBER" &&
+-        userTeam.role !== "ADMIN" &&
+-        userTeam.role !== "MANAGER"
+-      ) {
+-        return res
+-          .status(403)
+-          .json("Only admins and managers can manage data room members");
+-      }
+-
+-      if (userTeam?.role === "ADMIN" && userTeam.userId === userToBeChanged) {
+-        return res.status(401).json("You can't change the Admin");
++      // Refuse any change that would leave the team without an ADMIN.
++      if (role !== "ADMIN") {
++        const target = await prisma.userTeam.findUnique({
++          where: { userId_teamId: { userId: userToBeChanged, teamId } },
++          select: { role: true },
++        });
++        if (target?.role === "ADMIN") {
++          const adminCount = await prisma.userTeam.count({
++            where: { teamId, role: "ADMIN" },
++          });
++          if (adminCount <= 1) {
++            return res
++              .status(400)
++              .json("The team must keep at least one admin.");
++          }
++        }
+       }
+ 
+       const dataroomIds =
+-- 
+2.55.0

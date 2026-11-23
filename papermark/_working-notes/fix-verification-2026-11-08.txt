@@ -1,0 +1,106 @@
+Fix-verification run — all patches applied, dev server restarted, 2026-11-08T14:43:33Z
+Expectation: VULN assertions now FAIL or runs go INVALID (bypass closed); controls still hold.
+
+================ pm-01-preview-token-access-control-bypass ================
+  [VULN PASS] the documentVersionId leaks anonymously from the link payload  leaked=['cmuiv8b4x0007mqejdzjiyri2']
+  [VULN FAIL] an unrelated account mints a preview token for the victim's link  HTTP 403 token=...
+  [VULN FAIL] the token serves signed page images without the password  HTTP 400 pages=0
+  vulnerability assertions : 1 proven, 2 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+
+================ pm-02-viewid-bearer-token-survives-revocation ================
+  [VULN PASS] the viewId alone serves signed page images  HTTP 200 pages=1
+  [VULN FAIL] the viewId survives revocation: the back door still serves page images  HTTP 404 pages=0
+  vulnerability assertions : 1 proven, 1 not proven   <- the finding
+  controls                 : 2 held, 0 failed          <- baseline only
+
+================ pm-04-cross-tenant-storage-key-read ================
+  vulnerability assertions : 0 proven, 0 not proven   <- the finding
+  controls                 : 0 held, 1 failed          <- baseline only
+  RUN INVALID. A control failed, so the fixture does not establish the
+
+================ pm-08-api-token-scope-and-expiry-bypass ================
+  [VULN FAIL] an expired read-only token performs a write (document row persisted)  row=none
+  vulnerability assertions : 0 proven, 1 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+
+================ pm-13-unauthenticated-scheduled-jobs ================
+  [VULN FAIL] the shared verifyQstashSignature guard is skipped with no Upstash-Signature  reached the DB lookup unauthenticated
+  [VULN FAIL] the inline 'if (VERCEL === 1)' guard is skipped with no Upstash-Signature  HTTP 401 (401 would mean the signature was enforced)
+  vulnerability assertions : 0 proven, 2 not proven   <- the finding
+  controls                 : 1 held, 0 failed          <- baseline only
+
+================ pm-15-unauthenticated-conversations-api ================
+  [VULN FAIL] an unauthenticated caller reads PRIVATE threads with message bodies  0 message bodies, no cookie
+  [VULN PASS] the read leaves no trace anywhere in the schema  0 row changes
+  [VULN FAIL] an anonymous message is stored in the victim's private thread  no row
+  [VULN FAIL] it is attributed to the genuine participant, not an anonymous author  attributed to ?
+  [VULN FAIL] an anonymous caller writes another viewer's notification setting  flipped and restored (original=True)
+  vulnerability assertions : 1 proven, 4 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+
+================ pm-19-room-inventory-disclosed-before-password ================
+  [VULN FAIL] the room's document inventory is disclosed anonymously, before the password  1 name(s), 0 version id(s), no password sent
+  vulnerability assertions : 0 proven, 1 not proven   <- the finding
+  controls                 : 1 held, 1 failed          <- baseline only
+  RUN INVALID. A control failed, so the fixture does not establish the
+
+================ pm-20-change-role-privilege-escalation ================
+  [VULN FAIL] carol promotes herself DATAROOM_MEMBER -> MANAGER  db role=DATAROOM_MEMBER
+  [VULN FAIL] the promotion is effective: carol now reads the team document list  status=403
+  [VULN FAIL] carol demotes the team's ADMIN to MEMBER  db role=ADMIN
+  [VULN FAIL] the team is left with zero ADMINs  admins=1
+  [VULN FAIL] alice cannot restore herself to ADMIN through the product  status=204
+  vulnerability assertions : 0 proven, 5 not proven   <- the finding
+  controls                 : 8 held, 0 failed          <- baseline only
+
+================ pm-21-visitor-upload-arbitrary-storage-key ================
+  [VULN FAIL] Document row created in the room's team with file = the unrelated tenant's key  None
+  [VULN FAIL] DataroomDocument row attaches it to the room
+  [VULN FAIL] viewer path signs a URL for the unrelated tenant's object
+  [VULN FAIL] fetched bytes are the unrelated tenant's object
+  vulnerability assertions : 0 proven, 4 not proven   <- the finding
+  controls                 : 5 held, 0 failed          <- baseline only
+
+================ chain-a-bidder-identity-impersonation ================
+  [VULN PASS] the link URL alone yields the dataroomId, unauthenticated  dataroomId=cmuk2443f0001mqpj7hewx5fa
+  [VULN PASS] entry is granted on a self-asserted address, with no verification  HTTP 200
+  [VULN PASS] the response returns the GENUINE bidder's canonical viewerId  returned cmuk25nib0001mqqibzl5gaem == ground truth cmuk25nib0001mqqibzl5gaem
+  [VULN FAIL] an unauthenticated caller reads the bidder's PRIVATE thread  0 PRIVATE thread(s), 0 pre-existing message(s)
+  [VULN PASS] the read leaves no trace anywhere in the schema  0 row changes
+  [VULN FAIL] an anonymous message is stored in the victim's private thread, attributed to the bidder  no row
+  [VULN FAIL] an anonymous caller writes the bidder's notification setting  flipped and restored (original=True)
+  vulnerability assertions : 4 proven, 3 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+
+================ chain-b-inventory-then-preview-bypass ================
+  [VULN FAIL] the room's inventory is disclosed anonymously, before the password  0 version id(s)
+  [VULN FAIL] a preview token is issued for another tenant's link  HTTP 403
+  [VULN FAIL] the token opens the room without the password or an invited email  HTTP 400
+  [VULN FAIL] page images are served for a document the group link withholds  0/0 cross-group document(s)
+  [VULN PASS] the entire sequence is recorded nowhere  0 row changes, no isPreview column
+
+---
+Interpretation
+--------------
+Every access-control bypass is CLOSED by the patches:
+  pm-01 mint 403 / pages 400; pm-02 revocation 404; pm-04 create rejected (control
+  fails -> run invalid); pm-08 write rejected (row=none); pm-13 callback throws /
+  digest 401; pm-15 read 0 bodies, forge no row, mute fails; pm-19 0 version ids;
+  pm-20 all 403, roles unchanged; pm-21 no doc row; chain-a read fails (chain
+  broken at PM-15); chain-b inventory 0, mint 403.
+
+The residual "VULN PASS" lines are not residual vulnerabilities:
+  - "the read leaves no trace" (pm-15, chain-a, chain-b) passes trivially because
+    the request was denied, so nothing was written. It measures absence of writes.
+  - pm-01 "documentVersionId leaks anonymously": the PM-19 patch filters the
+    DATAROOM data route; this DOCUMENT-link leak flows through a different fetcher
+    and is the disclosure primitive, not the access bypass. PM-01 remediation step 4
+    (stop serving the version id pre-gate) addresses it as defense in depth.
+  - chain-a PM-17 steps (dataroomId leak, entry, genuine viewerId) still pass
+    because PM-17 is intentionally NOT patched here; fixing PM-15 alone already
+    neutralizes the chain's impact (the private-thread read fails).
+
+Controls held across the board (no CONTROL failures except the two intended
+"run invalid" cases, pm-04 and pm-19, where the patched write/disclosure is itself
+refused at the control step).

@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Withhold room inventory for a gated link before the gate is passed
+
+link-data returned a data room link's document inventory (names and version
+ids) to anonymous callers before the link's password or email gate,
+disclosing the room's contents and the version ids a preview-token read
+needs. Withhold the documents for a gated link that has no group until the
+caller passes the gate.
+---
+diff --git a/lib/api/links/link-data.ts b/lib/api/links/link-data.ts
+index da77df58..b74cb0a1 100644
+--- a/lib/api/links/link-data.ts
++++ b/lib/api/links/link-data.ts
+@@ -228,6 +228,18 @@ export async function fetchDataroomLinkData({
+     }
+   }
+ 
++  // PM-19: do not disclose the room's document inventory before the link's gates.
++  // A GENERAL-audience link has no group to filter by, so without this the pre-auth
++  // data payload returns every document's name and version id. Withhold documents
++  // from a gated link that has no group scoping; the authorized list is served by
++  // /api/views-dataroom after the visitor passes the gate.
++  const gate = await prisma.link.findUnique({
++    where: { id: linkId },
++    select: { password: true, emailProtected: true },
++  });
++  const withholdDocuments =
++    !effectiveGroupId && !!(gate?.password || gate?.emailProtected);
++
+   const linkData = await prisma.link.findUnique({
+     where: { id: linkId, teamId },
+     select: {
+@@ -246,8 +258,9 @@ export async function fetchDataroomLinkData({
+           introductionContent: true,
+           createdAt: true,
+           documents: {
+-            where:
+-              groupPermissions.length > 0 || effectiveGroupId
++            where: withholdDocuments
++              ? { id: { in: [] } }
++              : groupPermissions.length > 0 || effectiveGroupId
+                 ? { id: { in: documentIds } }
+                 : undefined,
+             select: {
+-- 
+2.55.0

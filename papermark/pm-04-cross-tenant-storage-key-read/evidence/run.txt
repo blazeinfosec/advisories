@@ -1,0 +1,18 @@
+PM-04 — cross-tenant storage key   base=http://localhost:3000
+  attacker team=cmuiv8b4d0003mqejm7mle4sl   victim key=cmuiv8b3q0001mqejmb79rz8g/doc_seed/board-deck.pdf
+
+  [NOTE] create response  status=500 (500 is the Trigger.dev stub; the row lands first)
+  [CTRL PASS] document row is owned by the attacker team but keyed to the victim prefix  {'id': 'cmw7wpssm0011mq191x5ar5cr', 'teamId': 'cmuiv8b4d0003mqejm7mle4sl', 'file': 'cmuiv8b3q0001mqejmb79rz8g/doc_seed/board-deck.pdf'}
+  [VULN PASS] download signs and returns a URL for the victim object  status=200 signed=http://papermark-audit.s3.localhost.localstack.cloud:4566/cmuiv8b3q0001mqejmb79r
+  [VULN PASS] attacker reads another tenant's original file bytes  MARKER team=cmuiv8b3q0001mqejmb79rz8g doc="Victim Q4 Board Deck" key=cmuiv8b3q0001mqejmb79rz8g/doc_seed/board-
+
+  cleanup: crafted document and version removed
+
+========================================================================
+PM-04 cross-tenant storage-key read
+========================================================================
+  vulnerability assertions : 2 proven, 0 not proven   <- the finding
+  controls                 : 1 held, 0 failed          <- baseline only
+  observations             : 1
+  skipped                  : 0
+

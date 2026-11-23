@@ -1,0 +1,170 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Authenticate the viewer on every conversations handler
+
+All four conversation handlers trusted a viewerId or email from the request
+as proof of identity, so an unauthenticated caller could read private
+threads, post messages attributed to a genuine participant and change
+another viewer's notification setting. Resolve the viewer from the
+authenticated session in every handler and reject a mismatch.
+---
+diff --git a/ee/features/conversations/api/conversations-route.ts b/ee/features/conversations/api/conversations-route.ts
+index cce9a339..e295e06e 100644
+--- a/ee/features/conversations/api/conversations-route.ts
++++ b/ee/features/conversations/api/conversations-route.ts
+@@ -3,6 +3,9 @@ import { NextApiRequest, NextApiResponse } from "next";
+ import { runs } from "@trigger.dev/sdk";
+ import { waitUntil } from "@vercel/functions";
+ 
++import { parse } from "cookie";
++
++import { getDataroomSessionByLinkIdInPagesRouter } from "@/lib/auth/dataroom-auth";
+ import prisma from "@/lib/prisma";
+ 
+ import {
+@@ -13,18 +16,42 @@ import { messageService } from "../lib/api/messages";
+ import { notificationService } from "../lib/api/notifications";
+ import { sendConversationTeamMemberNotificationTask } from "../lib/trigger/conversation-message-notification";
+ 
++// Resolve the caller's identity from their dataroom session cookie instead of
++// trusting a viewerId supplied in the request. The per-link session cookie
++// (pm_drs_<linkId>) is keyed in Redis to a server-stored session that records the
++// authenticated viewerId and dataroomId; we accept only a session bound to the
++// dataroom in question. Returns the authenticated viewerId, or null.
++async function resolveSessionViewer(
++  req: NextApiRequest,
++  dataroomId: string,
++): Promise<string | null> {
++  const cookies = parse(req.headers.cookie || "");
++  for (const name of Object.keys(cookies)) {
++    if (!name.startsWith("pm_drs_")) continue;
++    const linkId = name.slice("pm_drs_".length);
++    const session = await getDataroomSessionByLinkIdInPagesRouter(req, linkId);
++    if (session && session.dataroomId === dataroomId && session.viewerId) {
++      return session.viewerId;
++    }
++  }
++  return null;
++}
++
+ // Route mapping object to handle different paths
+ const routeHandlers = {
+   // GET /api/conversations
+   "GET /": async (req: NextApiRequest, res: NextApiResponse) => {
+     // Handle listing conversations
+-    const { dataroomId, viewerId } = req.query as {
+-      dataroomId?: string;
+-      viewerId?: string;
+-    };
++    const { dataroomId } = req.query as { dataroomId?: string };
+ 
+-    if (!dataroomId || !viewerId) {
+-      return res.status(400).json({ error: "Missing dataroomId or viewerId" });
++    if (!dataroomId) {
++      return res.status(400).json({ error: "Missing dataroomId" });
++    }
++
++    // Authenticate the caller from the dataroom session, not the query string.
++    const viewerId = await resolveSessionViewer(req, dataroomId);
++    if (!viewerId) {
++      return res.status(401).json({ error: "Unauthorized" });
+     }
+ 
+     const conversations = await prisma.conversation.findMany({
+@@ -75,11 +102,10 @@ const routeHandlers = {
+ 
+   // POST /api/conversations
+   "POST /": async (req: NextApiRequest, res: NextApiResponse) => {
+-    const { dataroomId, viewId, viewerId, documentId, pageNumber, ...data } =
++    const { dataroomId, viewId, documentId, pageNumber, ...data } =
+       req.body as CreateConversationInput & {
+         dataroomId: string;
+         viewId: string;
+-        viewerId?: string;
+         documentId?: string;
+         pageNumber?: number;
+       };
+@@ -96,9 +122,10 @@ const routeHandlers = {
+       });
+     }
+ 
+-    // Check if viewerId is provided
++    // Authenticate the caller from the dataroom session, not the request body.
++    const viewerId = await resolveSessionViewer(req, dataroomId);
+     if (!viewerId) {
+-      return res.status(400).json({ error: "Viewer is required" });
++      return res.status(401).json({ error: "Unauthorized" });
+     }
+ 
+     const team = await prisma.team.findFirst({
+@@ -200,10 +227,9 @@ const routeHandlers = {
+ 
+   // POST /api/conversations/messages
+   "POST /messages": async (req: NextApiRequest, res: NextApiResponse) => {
+-    const { content, viewId, viewerId, conversationId } = req.body as {
++    const { content, viewId, conversationId } = req.body as {
+       content: string;
+       viewId: string;
+-      viewerId: string;
+       conversationId: string;
+     };
+ 
+@@ -211,6 +237,27 @@ const routeHandlers = {
+       return res.status(400).json({ error: "Message content is required" });
+     }
+ 
++    // Authenticate the caller from the dataroom session, resolved via the
++    // conversation's dataroom, and require that they already participate.
++    const conv = await prisma.conversation.findUnique({
++      where: { id: conversationId },
++      select: { dataroomId: true },
++    });
++    if (!conv?.dataroomId) {
++      return res.status(404).json({ error: "Conversation not found" });
++    }
++    const viewerId = await resolveSessionViewer(req, conv.dataroomId);
++    if (!viewerId) {
++      return res.status(401).json({ error: "Unauthorized" });
++    }
++    const participant = await prisma.conversationParticipant.findFirst({
++      where: { conversationId, viewerId },
++      select: { id: true },
++    });
++    if (!participant) {
++      return res.status(403).json({ error: "Not a participant" });
++    }
++
+     // Create the message
+     const message = await messageService.addMessage({
+       conversationId,
+@@ -256,12 +303,25 @@ const routeHandlers = {
+ 
+   // POST /api/conversations/notifications
+   "POST /notifications": async (req: NextApiRequest, res: NextApiResponse) => {
+-    const { enabled, viewerId, conversationId } = req.body as {
++    const { enabled, conversationId } = req.body as {
+       enabled: boolean;
+-      viewerId: string;
+       conversationId: string;
+     };
+ 
++    // Authenticate the caller from the dataroom session; a caller may only change
++    // their own notification setting on a conversation they participate in.
++    const conv = await prisma.conversation.findUnique({
++      where: { id: conversationId },
++      select: { dataroomId: true },
++    });
++    if (!conv?.dataroomId) {
++      return res.status(404).json({ error: "Conversation not found" });
++    }
++    const viewerId = await resolveSessionViewer(req, conv.dataroomId);
++    if (!viewerId) {
++      return res.status(401).json({ error: "Unauthorized" });
++    }
++
+     await notificationService.toggleNotificationsForConversation({
+       conversationId,
+       viewerId,
+-- 
+2.55.0

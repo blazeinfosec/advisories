@@ -1,0 +1,84 @@
+PATH B — preview-token page exfiltration   general=cmul0fjhy0067mqv3czy0fzwk  group=cmukykgxj002vmqv34iveg3hq
+
+C0  Control: the attacker is a stranger to the seller's tenant.
+    session: rando-1790582644@nowhere-inc.test  plan=free
+    seller team: cmuiv8b3q0001mqejmb79rz8g   dataroom: cmuk2443f0001mqpj7hewx5fa
+  [CTRL PASS] the attacker is refused the seller's documents with 401  HTTP 401
+  [CTRL PASS] the attacker is refused the seller's datarooms with 401  HTTP 401
+  [CTRL PASS] the attacker holds no membership in the seller's team  own teams: cmukypmcf003lmqv3ahmytexr
+
+C1  Control: the link's own gate genuinely refuses this attacker.
+  [NOTE] link configuration  audience=GENERAL password=set emailProtected=true
+    entry with an email but no password/token -> HTTP 400 Password is required.
+  [CTRL PASS] the gate rejects entry for a reason other than schema validation  HTTP 400 "Password is required."
+
+D1  Inventory the room from the GENERAL link. Anonymous, before the password.
+    GET /_next/data/.../view/cmul0fjhy0067mqv3czy0fzwk.json -> HTTP 200, 16571 bytes
+      document: "Project Falcon"
+      document: "Falcon - Litigation Settlement CONFIDENTIAL"
+      document: "Falcon - Teaser (shared)"
+    documentVersionIds: ["cmuk2444p000dmqpjeutma8dd","cmuk2443z0005mqpjma6zcllq"]
+  [VULN PASS] the room's document inventory is disclosed anonymously, before the password  3 name(s), 2 version id(s), no password sent
+
+C3  Control: the GROUP link is correctly filtered. This is why D1 matters.
+    group link discloses: ["cmuk2443z0005mqpjma6zcllq"]
+    disclosed by GENERAL but NOT by the group link: ["cmuk2444p000dmqpjeutma8dd"]
+  [CTRL PASS] the group link withholds at least one document the GENERAL link discloses  1 withheld
+  [NOTE] so a group link alone is NOT enough  lib/api/links/link-data.ts:197 filters by viewerGroupAccessControls
+
+V1  Mint a preview token for a link the attacker does not own.
+    POST /api/links/cmul0fjhy0067mqv3czy0fzwk/preview -> HTTP 200
+  [VULN PASS] a preview token is issued for another tenant's link  038f1568350c0832...
+  [NOTE] root cause  pages/api/links/[id]/preview.ts:16-27 checks the session, never the team
+
+V2  Open the room and pull pages with the token. Measuring what it records.
+    views-dataroom + token -> HTTP 200  isPreview=true  "Project Falcon"
+  [VULN PASS] the token opens the room without the password or an invited email  "Project Falcon"
+
+V3  Pull page images of documents discovered in D1.
+    cmuk2444p000dmqpjeutma8dd (withheld from the group link) -> HTTP 200
+    cmuk2443z0005mqpjma6zcllq (in the group link) -> HTTP 200
+  [VULN PASS] page images are served for a document the group link withholds  1/1 cross-group document(s)
+  [NOTE] root cause  views/pages:122-133 binds document->dataroom only; link.groupId and viewerGroupAccessControls are never read
+
+V4  Fetch the bytes. No credentials on the signed URL.
+    HTTP 200  57 bytes  image/jpeg
+    content: LITIGATION SETTLEMENT - BIDDER B ONLY - NOT FOR BIDDER A
+    key: /cmuiv8b3q0001mqejmb79rz8g/doc_bidderb/page-1.jpg
+  [VULN PASS] the withheld document's rendered bytes are retrieved  57 bytes
+
+V5  What the seller's tenant recorded.
+    "View" columns: 17, isPreview column present: false
+    row deltas across V2+V3 over 79 tables: {}
+  [VULN PASS] the entire sequence is recorded nowhere  0 row changes, and no isPreview column exists
+  [NOTE] the response body still says  "Dataroom View recorded" while nothing is written
+
+C4  What the token reaches beyond page images, and what it does not.
+    views-dataroom DOCUMENT_VIEW + token -> HTTP 200
+  [NOTE] this link is GENERAL, so link.groupId is NULL and the ACL branch at :1120 never runs  a GENERAL link grants the whole room by design; the defect here is the bypassed password
+  [VULN PASS] the ORIGINAL uploaded file is served, not just a page image  /cmuiv8b3q0001mqejmb79rz8g/doc_bidderb/bidderb.pdf
+    original fetch -> HTTP 200  89 bytes  application/pdf
+    content: %PDF-1.4 FALCON LITIGATION SETTLEMENT - BIDDER B ONLY - ORIGINAL UPLOA
+  [VULN PASS] the original file's bytes are retrieved with no password and no invited email  89 bytes
+  [CTRL PASS] bulk document download refuses a preview token  HTTP 401
+  [SKIP] preview key -> PM-04 -> original upload  STRUCK in round 3. The preview path emits page-image keys only (fetchAndReturnPages selects from documentPage); DocumentVersion.file appears only on app/api/views/route.ts:962, which requires link.documentId. Feeding the leaked key to PM-04 returns the same page image — persistence, not new content.
+
+V6  Does revoking the link stop it?
+    seller archives the link -> HTTP 200
+  [CTRL PASS] the seller's archive request succeeded  HTTP 200
+    after archival: views-dataroom=404  views/pages=200
+  [CTRL PASS] archival does close room entry  HTTP 404
+  [VULN PASS] archival does NOT close the page-image route  views/pages still HTTP 200
+    link un-archived (state restored)
+
+========================================================================
+PATH B
+========================================================================
+  vulnerability assertions : 9 proven, 0 not proven   <- the finding
+  controls                 : 8 held, 0 failed          <- baseline only
+  observations             : 6
+  skipped                  : 1
+
+  Not demonstrated in this run:
+    - preview key -> PM-04 -> original upload: STRUCK in round 3. The preview path emits page-image keys only (fetchAndReturnPages selects from documentPage); DocumentVersion.file appears only on app/api/views/route.ts:962, which requires link.documentId. Feeding the leaked key to PM-04 returns the same page image — persistence, not new content.
+

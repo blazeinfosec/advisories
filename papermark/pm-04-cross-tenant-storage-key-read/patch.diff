@@ -1,0 +1,35 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Reject a storage key that names another team's prefix
+
+processDocument trusted a client-supplied S3_PATH storage key and later
+derived the owning team from the key's first path segment, so a key naming
+another team's prefix was read back with that team's storage access (PM-04)
+and a visitor upload could attach another tenant's object to a room (PM-21).
+Reject a key whose first segment is not the caller's teamId, at the single
+sink every upload path passes through. Shared fix with PM-21.
+---
+diff --git a/lib/api/documents/process-document.ts b/lib/api/documents/process-document.ts
+index e0349dbf..e4e5b2bb 100644
+--- a/lib/api/documents/process-document.ts
++++ b/lib/api/documents/process-document.ts
+@@ -63,6 +63,16 @@ export const processDocument = async ({
+   // public; link URLs must be well-formed and not blocked). No-op otherwise.
+   await validateExternalDocumentUrl({ type, key, teamId });
+ 
++  // Tenant isolation: a client-supplied S3 key must live under this team's own
++  // prefix. Storage keys are `<teamId>/<docId>/<name>`, and both the downloader
++  // and the viewer derive the team from the key itself, so a key naming another
++  // team's prefix is read back with that team's storage access. Reject it here,
++  // where every caller (dashboard upload, public API, and visitor upload) passes
++  // through. Closes PM-04 and PM-21.
++  if (storageType === "S3_PATH" && key.split("/")[0] !== teamId) {
++    throw new Error("Storage key does not belong to this team.");
++  }
++
+   // `folderId` (resolved by callers like the public v1 API) wins over the
+   // path-based lookup; the path lookup remains for the dashboard upload flow
+   // which still passes `folderPathName` referring to a pre-existing folder.
+-- 
+2.55.0

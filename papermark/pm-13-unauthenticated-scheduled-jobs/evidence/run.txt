@@ -1,0 +1,26 @@
+PM-13 — scheduled jobs unauthenticated off Vercel   base=http://localhost:3000
+  Precondition: the deployment is not on Vercel (process.env.VERCEL != '1').
+  On Vercel these routes verify the Upstash-Signature and return 401.
+
+  [NOTE] webhooks/callback response  HTTP 200 body='Webhook not found'
+  [VULN PASS] the shared verifyQstashSignature guard is skipped with no Upstash-Signature  reached the DB lookup unauthenticated
+  [NOTE] cron/dataroom-digest/daily response  HTTP 200 body='{"success":true,"processed":0}'
+  [VULN PASS] the inline 'if (VERCEL === 1)' guard is skipped with no Upstash-Signature  HTTP 200 (401 would mean the signature was enforced)
+  [CTRL PASS] the callback probe wrote nothing (Webhook-not-found path precedes the write)  0 row changes
+  [SKIP] cron/domains  fires external Vercel domain-API calls per domain; source-confirmed to share the inline VERCEL guard
+  [SKIP] cron/welcome-user  sends a welcome email downstream (reaches past the helper guard: historically HTTP 500 on the email step, not 401)
+  [SKIP] full webhook-event forgery  writing a forged delivery record needs a real webhookId and mutates the team's webhook event log; the no-write path above already proves the bypass
+
+========================================================================
+PM-13 unauthenticated scheduled jobs off Vercel
+========================================================================
+  vulnerability assertions : 2 proven, 0 not proven   <- the finding
+  controls                 : 1 held, 0 failed          <- baseline only
+  observations             : 2
+  skipped                  : 3
+
+  Not demonstrated in this run:
+    - cron/domains: fires external Vercel domain-API calls per domain; source-confirmed to share the inline VERCEL guard
+    - cron/welcome-user: sends a welcome email downstream (reaches past the helper guard: historically HTTP 500 on the email step, not 401)
+    - full webhook-event forgery: writing a forged delivery record needs a real webhookId and mutates the team's webhook event log; the no-write path above already proves the bypass
+

@@ -1,0 +1,29 @@
+PM-21 — visitor upload accepts an arbitrary storage key   base=http://localhost:3000
+  room=cmujghwm60001mqcvz45qvx3w (team cmuiv8b3q0001mqejmb79rz8g)   target key belongs to cmuiv8b4d0003mqejm7mle4sl
+  TARGET_KEY=cmuiv8b4d0003mqejm7mle4sl/doc_h13/x.pdf
+
+  [CTRL PASS] seller creates an upload-enabled data room link  status=200 link=cmw7wk2mc000jmq197r1f16os
+  [CTRL PASS] link row: enableUpload=true, no group  {'enableUpload': True, 'audienceType': 'GENERAL', 'groupId': None, 'teamId': 'cmuiv8b3q0001mqejmb79rz8g'}
+  [CTRL PASS] visitor enters the room and receives a dataroom session cookie  status=200 viewerId=cmw7wka4d000lmq196i1exr65
+  [CTRL PASS] room listing does not reference the unrelated tenant's key before the attack  status=200
+  [NOTE] upload response  status=200 body={"success":true,"document":{"id":"cmw7wm9u9000pmq19l529kn8h","name":"innocent-looking.pdf","dataroomDocumentId":"cmw7wm9um000smq19igtkv4rd","documentVersionId":
+  [VULN PASS] Document row created in the room's team with file = the unrelated tenant's key  {'id': 'cmw7wm9u9000pmq19l529kn8h', 'teamId': 'cmuiv8b3q0001mqejmb79rz8g', 'file': 'cmuiv8b4d0003mqejm7mle4sl/doc_h13/x.pdf', 'isExternalUpload': True, 'vid': 'cmw7wm9u9000qmq19z3asw2cw'}
+  [VULN PASS] DataroomDocument row attaches it to the room
+  [NOTE] DOCUMENT_VIEW response  status=200 file=http://papermark-audit.s3.localhost.localstack.cloud:4566/cmuiv8b4d0003mqejm7mle4sl/doc_h13/x.pdf?X-
+  [VULN PASS] viewer path signs a URL for the unrelated tenant's object
+  [VULN PASS] fetched bytes are the unrelated tenant's object  MARKER team=cmuiv8b4d0003mqejm7mle4sl doc="written-by-readonly-expired-token" key=cmuiv8b4d0003mqejm7mle4sl/do
+  [CTRL PASS] upload route refuses a caller with no dataroom session  status=401
+
+  pre-run cleanup removed  : {'links': 0, 'docs': 0, 'viewers': 0}
+  post-run cleanup removed : {'links': 1, 'docs': 1, 'viewers': 1}
+  row-count delta vs baseline after cleanup: {}  (restored)
+
+========================================================================
+PM-21 visitor upload / arbitrary storage key
+========================================================================
+  vulnerability assertions : 4 proven, 0 not proven   <- the finding
+  controls                 : 5 held, 0 failed          <- baseline only
+  observations             : 2
+  skipped                  : 0
+
+

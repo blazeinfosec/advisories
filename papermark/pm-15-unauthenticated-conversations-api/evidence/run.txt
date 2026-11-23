@@ -1,0 +1,31 @@
+PM-15 — unauthenticated conversations API   base=http://localhost:3000
+  conversation=cmuk1fd7b0003mqmjmfjgpd5n  room=cmujghwm60001mqcvz45qvx3w  team=cmuiv8b3q0001mqejmb79rz8g
+  participant viewerId=cmuk1fd6r0001mqmj28d9emrb (confidential-bidder@acme.test)
+
+  [CTRL PASS] the conversation is PRIVATE and belongs to the victim team
+  [CTRL PASS] the viewerId is a genuine participant row
+  [CTRL PASS] the thread already contains messages the attacker did not write  9 pre-existing message(s)
+    anonymous GET -> HTTP 200, 1 thread(s), 1 PRIVATE
+      > CONFIDENTIAL: what is the real EBITDA?
+      > FORGED BY ANONYMOUS ATTACKER
+      > REVIEWER1-R2-FORGERY-1790541353
+      > self-enrolment probe
+  [VULN PASS] an unauthenticated caller reads PRIVATE threads with message bodies  9 message bodies, no cookie
+  [VULN PASS] the read leaves no trace anywhere in the schema  0 row changes
+  [NOTE] message POST response  HTTP 500 (a 500 is TRIGGER_SECRET_KEY thrown AFTER the write)
+  [VULN PASS] an anonymous message is stored in the victim's private thread  cmw7x6jpb0019mq19rj1babf2
+  [VULN PASS] it is attributed to the genuine participant, not an anonymous author  attributed to confidential-bidder@acme.test
+    True --(HTTP 200)--> False --(HTTP 200)--> True
+  [VULN PASS] an anonymous caller writes another viewer's notification setting  flipped and restored (original=True)
+  [NOTE] cross-tenant  conversations-route.ts:19-28 reads viewerId from the query and never compares it to a session or team, so a caller in any tenant (or none) reads this thread
+
+  cleanup: forged message deleted; notification setting restored
+
+========================================================================
+PM-15 unauthenticated conversations API
+========================================================================
+  vulnerability assertions : 5 proven, 0 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+  observations             : 2
+  skipped                  : 0
+

@@ -1,0 +1,25 @@
+H13 TRANSCRIPT 2026-09-27T12:39:18Z
+Token: scopes='apis.read' (read-only), expires=2026-09-26 (EXPIRED yesterday)
+
+--- WRITE with a read-only, expired token ---
+POST /api/teams/cmuiv8b4d0003mqejm7mle4sl/documents
+{"message":"Internal Server Error"}
+  HTTP 500
+  (HTTP 500 is the same Trigger.dev artifact as PM-04 - the row is written first)
+
+  DB confirms the write succeeded:
+id=cmujt2l3w0001mq8c1qiob8fm | team=cmuiv8b4d0003mqejm7mle4sl | file=cmuiv8b4d0003mqejm7mle4sl/doc_h13/x.pdf
+
+--- CONTROL: bogus token ---
+  HTTP 401
+--- CONTROL: valid token, but pointed at a team it does not belong to ---
+  HTTP 401
+
+Source: pages/api/teams/[teamId]/documents/index.ts:375-395
+  select: { userId: true, teamId: true }   <- 'scopes' and 'expires' are not even SELECTED
+  The only checks are: token exists, and restrictedToken.teamId === teamId.
+
+--- PM-08 third instance: webhooks/services with the read-only EXPIRED token ---
+POST /api/webhooks/services/x  resourceType=link.create
+<!DOCTYPE html><html><head><style data-next-hide-fouc="true">body{display:none}</style><noscript data-next-hide-fouc="true"><style>body{display:block}</style></noscript><meta charSet="utf-8"/><meta name="viewport" content="width=device-width"/><meta name="next-head-count" content="2"/><link rel="pre  Source: pages/api/webhooks/services/[...path]/index.ts:177-180
+    select: { teamId: true, rateLimit: true }  <- scopes and expires again not selected

@@ -1,0 +1,24 @@
+PM-19 — room inventory disclosed before the password   base=http://localhost:3000
+  general link=cmukzif82005amqv31mye7pq5  room=cmukz08k00001mq7c8pqekeur  group link=cmukz4orb004jmqv30o7y4zeq
+
+    GET /_next/data/.../view/cmukzif82005amqv31mye7pq5.json -> HTTP 200, 17339 bytes
+      document: 'R2D3 Harrier - BETA ONLY Litigation'
+      document: 'R2D3 Harrier - Second SHARED'
+      document: 'R2D3 Harrier - Teaser SHARED'
+      document: 'R2D3 Harrier - UNSHARED STAGING'
+      document: 'R2D3 Project Harrier'
+    documentVersionIds: ['cmukz08kx0005mq7c9lecbxj5', 'cmukz08ma000dmq7cl7plzx1z', 'cmukzgxl50003mqofu1g9kbhz', 'cmul063di0003mq3r176ufi0k']
+  [VULN PASS] the room's document inventory is disclosed anonymously, before the password  5 name(s), 4 version id(s), no password sent
+  [CTRL PASS] the password gate genuinely blocks room entry  HTTP 400 'Password is required.'
+  [NOTE] group link discloses  ['cmukz08kx0005mq7c9lecbxj5', 'cmukzgxl50003mqofu1g9kbhz']
+  [CTRL PASS] the GROUP link withholds at least one document the GENERAL link disclosed  2 withheld (so the GENERAL disclosure is not inherent to the data route)
+  [NOTE] root cause  lib/api/links/link-data.ts returns room contents before the link's gates; GROUP links are filtered via viewerGroupAccessControls, GENERAL links are not
+
+========================================================================
+PM-19 room inventory disclosed before the password
+========================================================================
+  vulnerability assertions : 1 proven, 0 not proven   <- the finding
+  controls                 : 2 held, 0 failed          <- baseline only
+  observations             : 2
+  skipped                  : 0
+

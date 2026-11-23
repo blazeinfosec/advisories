@@ -1,0 +1,23 @@
+PM-01 — preview token bypasses link gates   base=http://localhost:3000
+  victim password link=cmuiv8b5t000fmqejw0iduodh  documentVersionId=cmuiv8b4x0007mqejdzjiyri2
+
+  [NOTE] anonymous data payload  HTTP 200, password field redacted=True
+  [VULN PASS] the documentVersionId leaks anonymously from the link payload  leaked=['cmuiv8b4x0007mqejdzjiyri2']
+  [CTRL PASS] POST /api/views without the password is refused by the gate  HTTP 400 'Password is required.'
+  [CTRL PASS] POST /api/views/pages with no valid view or token is refused  HTTP 400
+  [VULN PASS] an unrelated account mints a preview token for the victim's link  HTTP 200 token=0ba04027bf86f219...
+  [CTRL PASS] minting a preview token with no session is refused  HTTP 401
+  [VULN PASS] the token serves signed page images without the password  HTTP 200 pages=1
+  [VULN PASS] the victim document's rendered bytes are retrieved  122 bytes: 'MARKER team=cmuiv8b3q0001mqejmb79rz8g doc="Victim Q4 Board D'
+  [NOTE] root cause  pages/api/links/[id]/preview.ts mints for any link with no team check; the /api/views/pages preview branch then applies none of the link's gates
+
+  cleanup: link archive/expiry/delete state restored to pre-run values
+
+========================================================================
+PM-01 preview token bypasses link access controls
+========================================================================
+  vulnerability assertions : 4 proven, 0 not proven   <- the finding
+  controls                 : 3 held, 0 failed          <- baseline only
+  observations             : 2
+  skipped                  : 0
+

@@ -1,0 +1,30 @@
+CHAIN B — preview-token page exfiltration   base=http://localhost:3000
+  general link=cmul0fjhy0067mqv3czy0fzwk  group link=cmuk2445o000tmqpjs5h7m113  room=cmuk2443f0001mqpj7hewx5fa
+
+  [CTRL PASS] the attacker is refused the seller's documents  HTTP 401
+  [CTRL PASS] the attacker is refused the seller's datarooms  HTTP 401
+  [CTRL PASS] the attacker holds no membership in the seller's team
+  [CTRL PASS] the gate rejects entry (password required)  HTTP 400 'Password is required.'
+  [VULN PASS] the room's inventory is disclosed anonymously, before the password  2 version id(s)
+  [CTRL PASS] the GROUP link withholds at least one document the GENERAL link discloses  1 withheld
+  [VULN PASS] a preview token is issued for another tenant's link  HTTP 200
+  [VULN PASS] the token opens the room without the password or an invited email  HTTP 200
+  [VULN PASS] page images are served for a document the group link withholds  1/1 cross-group document(s)
+  [VULN PASS] the withheld document's rendered bytes are retrieved  148 bytes
+  [VULN PASS] the entire sequence is recorded nowhere  0 row changes, no isPreview column
+  [VULN PASS] on a GENERAL link the ORIGINAL uploaded file is served, not just a page image  http://papermark-audit.s3.localhost.localstack.cloud:4566/cmuiv8b3q000
+  [VULN PASS] the original file's bytes are retrieved with no password  171 bytes
+  [CTRL PASS] bulk document download refuses a preview token  HTTP 401
+  [CTRL PASS] archival does close room entry (front door)  HTTP 404
+  [VULN PASS] archival does NOT close the page-image route  views/pages still HTTP 200
+
+  cleanup: GENERAL link archive/expiry/delete state restored
+
+========================================================================
+CHAIN B — inventory then preview-token bypass
+========================================================================
+  vulnerability assertions : 9 proven, 0 not proven   <- the finding
+  controls                 : 7 held, 0 failed          <- baseline only
+  observations             : 0
+  skipped                  : 0
+

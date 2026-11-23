@@ -1,0 +1,109 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Julio Fort <julio.fort@blazeinfosec.com>
+Date: Sun, 08 Nov 2026 12:00:00 +0100
+Subject: [PATCH] Fail closed when the QStash signature is absent off Vercel
+
+verifyQstashSignature and four inline cron handlers skipped signature
+verification unless process.env.VERCEL === "1", leaving every scheduled job
+and the webhook callback unauthenticated on self-hosted deployments. Remove
+the VERCEL gate and fail closed when the Upstash-Signature is missing or
+invalid.
+---
+diff --git a/app/api/cron/dataroom-digest/daily/route.ts b/app/api/cron/dataroom-digest/daily/route.ts
+index e70ee1ed..8eb4cad4 100644
+--- a/app/api/cron/dataroom-digest/daily/route.ts
++++ b/app/api/cron/dataroom-digest/daily/route.ts
+@@ -9,7 +9,13 @@ export const maxDuration = 300;
+ 
+ export async function POST(req: Request) {
+   const body = await req.json();
+-  if (process.env.VERCEL === "1") {
++  // Verify on every deployment and fail closed when unconfigured. The previous
++  // `if (process.env.VERCEL === "1")` wrapper skipped verification on every
++  // non-Vercel deployment, including production self-hosting.
++  if (!process.env.QSTASH_CURRENT_SIGNING_KEY) {
++    return new Response("Unauthorized", { status: 401 });
++  }
++  {
+     const isValid = await receiver.verify({
+       signature: req.headers.get("Upstash-Signature") || "",
+       body: JSON.stringify(body),
+diff --git a/app/api/cron/dataroom-digest/weekly/route.ts b/app/api/cron/dataroom-digest/weekly/route.ts
+index 778cbb89..417d2ddd 100644
+--- a/app/api/cron/dataroom-digest/weekly/route.ts
++++ b/app/api/cron/dataroom-digest/weekly/route.ts
+@@ -9,7 +9,13 @@ export const maxDuration = 300;
+ 
+ export async function POST(req: Request) {
+   const body = await req.json();
+-  if (process.env.VERCEL === "1") {
++  // Verify on every deployment and fail closed when unconfigured. The previous
++  // `if (process.env.VERCEL === "1")` wrapper skipped verification on every
++  // non-Vercel deployment, including production self-hosting.
++  if (!process.env.QSTASH_CURRENT_SIGNING_KEY) {
++    return new Response("Unauthorized", { status: 401 });
++  }
++  {
+     const isValid = await receiver.verify({
+       signature: req.headers.get("Upstash-Signature") || "",
+       body: JSON.stringify(body),
+diff --git a/app/api/cron/domains/route.ts b/app/api/cron/domains/route.ts
+index 4d573638..94dd8cf4 100644
+--- a/app/api/cron/domains/route.ts
++++ b/app/api/cron/domains/route.ts
+@@ -23,7 +23,13 @@ export const maxDuration = 300; // 5 minutes in seconds
+ 
+ export async function POST(req: Request) {
+   const body = await req.json();
+-  if (process.env.VERCEL === "1") {
++  // Verify on every deployment and fail closed when unconfigured. The previous
++  // `if (process.env.VERCEL === "1")` wrapper skipped verification on every
++  // non-Vercel deployment, including production self-hosting.
++  if (!process.env.QSTASH_CURRENT_SIGNING_KEY) {
++    return new Response("Unauthorized", { status: 401 });
++  }
++  {
+     const isValid = await receiver.verify({
+       signature: req.headers.get("Upstash-Signature") || "",
+       body: JSON.stringify(body),
+diff --git a/app/api/cron/year-in-review/route.ts b/app/api/cron/year-in-review/route.ts
+index 93b10366..f531a1f1 100644
+--- a/app/api/cron/year-in-review/route.ts
++++ b/app/api/cron/year-in-review/route.ts
+@@ -9,7 +9,13 @@ export const maxDuration = 300; // 5 minutes in seconds
+ 
+ export async function POST(req: Request) {
+   const body = await req.json();
+-  if (process.env.VERCEL === "1") {
++  // Verify on every deployment and fail closed when unconfigured. The previous
++  // `if (process.env.VERCEL === "1")` wrapper skipped verification on every
++  // non-Vercel deployment, including production self-hosting.
++  if (!process.env.QSTASH_CURRENT_SIGNING_KEY) {
++    return new Response("Unauthorized", { status: 401 });
++  }
++  {
+     const isValid = await receiver.verify({
+       signature: req.headers.get("Upstash-Signature") || "",
+       body: JSON.stringify(body),
+diff --git a/lib/cron/verify-qstash.ts b/lib/cron/verify-qstash.ts
+index efc0d731..8f304320 100644
+--- a/lib/cron/verify-qstash.ts
++++ b/lib/cron/verify-qstash.ts
+@@ -8,9 +8,12 @@ export const verifyQstashSignature = async ({
+   req: Request;
+   rawBody: string; // Make sure to pass the raw body not the parsed JSON
+ }) => {
+-  // skip verification in local development
+-  if (process.env.VERCEL !== "1") {
+-    return;
++  // Verify the signature on every deployment. The previous check returned early
++  // whenever VERCEL !== "1", which is every non-Vercel deployment — including
++  // production self-hosting — so the signature was never verified there. Fail
++  // closed when no signing key is configured rather than accepting unsigned calls.
++  if (!process.env.QSTASH_CURRENT_SIGNING_KEY) {
++    throw new Error("QStash signing key is not configured.");
+   }
+ 
+   const signature = req.headers.get("Upstash-Signature");
+-- 
+2.55.0

@@ -1,0 +1,62 @@
+M&A CROSS-BIDDER TEST 2026-09-27T16:52:54Z
+Dataroom 'Project Falcon'. Bidder A link is scoped to Group A (shared doc only).
+Bidder B's litigation doc is granted ONLY to Group B.
+
+--- Bidder A opens their own link (legitimate) ---
+  HTTP 403
+{"message":"Unauthorized access"}
+
+--- Bidder A opens their own group-scoped link ---
+  HTTP 200
+  keys: ['message', 'viewId', 'verificationToken', 'viewerId', 'conversationsEnabled', 'enableVisitorUpload', 'uploadFolderAllowList', 'agentsEnabled', 'dataroomName']
+  viewId: cmuk266in0005mqkm7ixrg0ng
+  dataroomName: Project Falcon
+
+=== Bidder A attempts Bidder B's CONFIDENTIAL litigation doc ===
+  1. views-dataroom DOCUMENT_VIEW      -> HTTP 403  {"message":"Unauthorized access."}
+  2. views/pages with my own viewId    -> HTTP 403  {"message":"Unauthorized access."}
+  3. download/dataroom-document        -> HTTP 403  {"error":"Error downloading"}
+
+  4. generate-index as Bidder A (group-scoped) -> 
+     HTTP 200
+     entries: 2
+       - Root Folder | Project Falcon
+       - File | Falcon - Teaser (shared)
+
+=== IDENTITY TEST: submit BIDDER B's email on BIDDER A's link ===
+    (link is scoped to Group A; emailAuthenticated = false)
+    HTTP 403  {"message":"Unauthorized access"}
+=== REALISTIC CONFIG: emailProtected=true, emailAuthenticated=false (schema defaults) ===
+  attacker with NO email            -> HTTP 400  {"message":"Email is required."}
+  attacker TYPING bidder A's email  -> HTTP 200  {"message":"Dataroom View recorded","viewId":"cmuk2bq600007mqkm1mw211kk","verificationToken":null,"viewerId":"cmuk25nib0
+=== BIDDER-LIST ORACLE: same link, different candidate emails ===
+  bidder-a@acquirer-alpha.test       -> HTTP 200  {"message":"Dataroom View recorded","viewId":"cmuk2ckz90009m
+  bidder-b@acquirer-beta.test        -> HTTP 403  {"message":"Unauthorized access"}
+  nobody@random-firm.test            -> HTTP 403  {"message":"Unauthorized access"}
+  ceo@acquirer-alpha.test            -> HTTP 403  {"message":"Unauthorized access"}
+
+  200 = this address is on the invited bidder list for this group
+  403 = it is not
+
+=== ORACLE WITH emailAuthenticated = TRUE (the recommended hardening) ===
+  bidder-a@acquirer-alpha.test       -> HTTP 200  {"type":"email-verification","message":"Verification email sent."}
+  bidder-b@acquirer-beta.test        -> HTTP 403  {"message":"Unauthorized access"}
+  nobody@random-firm.test            -> HTTP 403  {"message":"Unauthorized access"}
+
+=== ROLE-BOUNDARY: carol = DATAROOM_MEMBER, 0 room assignments ===
+schema: 'Least-privileged role... Denied everywhere else.' (team.prisma:105-107)
+
+  control  GET /documents      -> HTTP 403
+  GET /workflow-links:
+[{"id":"cmuk2445o000tmqpjs5h7m113","name":"Bidder A link","slug":null,"domainSlug":null,"linkType":"DATAROOM_LINK","documentId":null,"dataroomId":"cmuk2443f0001mqpj7hewx5fa","allowList":[],"resourceName":"Project Falcon","displayName":"Bidder A link"},{"id":"cmujghwo30007mqcv3xonjweg","name":"DR LINK","slug":null,"domainSlug":null,"linkType":"DATAROOM_LINK","documentId":null,"dataroomId":"cmujghwm60001mqcvz45qvx3w","allowList":["invited@partner.t
+links returned to a zero-room DATAROOM_MEMBER: 4
+  deal/resource: 'Project Falcon' | allowList: []
+  deal/resource: 'Victim Secret Dataroom' | allowList: ['invited@partner.test']
+  deal/resource: 'Victim Q4 Board Deck' | allowList: []
+  deal/resource: 'Victim Q4 Board Deck' | allowList: ['invited@partner.test']
+=== cross-tenant probes, clean server, attacker = mallory (other tenant) ===
+  POST  /teams/<victim>/invitations            -> HTTP 000  
+  PATCH /teams/<victim>/datarooms/<dr>/users   -> HTTP 000  
+
+=== cross-tenant probes on a fresh server (attacker in a different tenant) ===
+  POST  /teams/<victim>/invitations          -> HTTP 000  

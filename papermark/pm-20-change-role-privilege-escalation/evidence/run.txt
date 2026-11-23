@@ -1,0 +1,28 @@
+PM-20 — change-role has no members.write check   base=http://localhost:3000  team=cmuiv8b3q0001mqejmb79rz8g
+
+  [CTRL PASS] carol starts as DATAROOM_MEMBER
+  [CTRL PASS] alice starts as ADMIN, and is the team's only ADMIN
+  [CTRL PASS] carol has zero room entitlements  rooms=0
+  [CTRL PASS] as DATAROOM_MEMBER, carol is refused the team document list  status=403
+  [CTRL PASS] no session -> 401
+  [CTRL PASS] a different tenant's admin -> 401
+  [CTRL PASS] carol asking for ADMIN -> 403  status=403
+  [CTRL PASS] carol assigning DATAROOM_MEMBER -> 403  status=403
+  [NOTE] self-promotion response  status=204
+  [VULN PASS] carol promotes herself DATAROOM_MEMBER -> MANAGER  db role=MANAGER
+  [VULN PASS] the promotion is effective: carol now reads the team document list  status=200
+  [NOTE] admin demotion response  status=204
+  [VULN PASS] carol demotes the team's ADMIN to MEMBER  db role=MEMBER
+  [VULN PASS] the team is left with zero ADMINs  admins=0
+  [VULN PASS] alice cannot restore herself to ADMIN through the product  status=403
+
+  restore: roles match the pre-run snapshot
+
+========================================================================
+PM-20 change-role / DATAROOM_MEMBER escalation and admin demotion
+========================================================================
+  vulnerability assertions : 5 proven, 0 not proven   <- the finding
+  controls                 : 8 held, 0 failed          <- baseline only
+  observations             : 2
+  skipped                  : 0
+

